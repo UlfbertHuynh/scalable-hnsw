@@ -7,9 +7,9 @@ import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import java.util.*;
 
-public class LeafHnswSearcher extends LeafHnsw {
+public class LeafSegmentSearcher extends LeafSegment {
 
-    LeafHnswSearcher(ParentHnsw parent, int numName, String idxDir) {
+    LeafSegmentSearcher(ParentHnsw parent, int numName, String idxDir) {
         super(parent, numName, idxDir, Mode.SEARCH);
     }
 

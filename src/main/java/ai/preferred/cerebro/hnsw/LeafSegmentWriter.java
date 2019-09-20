@@ -10,15 +10,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
 
-public class LeafHnswWriter extends LeafHnsw {
+public class LeafSegmentWriter extends LeafSegment {
 
     //Creation Constructor
-    protected LeafHnswWriter(HnswIndexWriter parent, int numName ,int baseID) {
+    protected LeafSegmentWriter(HnswIndexWriter parent, int numName , int baseID) {
         super(parent, numName, baseID);
     }
 
     //Load Constructor
-    protected LeafHnswWriter(HnswIndexWriter parent, int numName , String idxDir){
+    protected LeafSegmentWriter(HnswIndexWriter parent, int numName , String idxDir){
         super(parent, numName, idxDir, Mode.MODIFY);
     }
 
@@ -72,6 +72,8 @@ public class LeafHnswWriter extends LeafHnsw {
         if (entryPoint == node) {
             entryPoint = null;
         }
+        if (lookup.contains(node.item.externalId))
+            lookup.remove(node.item.externalId);
         nodes[internalID] = null;
         freedIds.push(internalID);
         return true;
@@ -218,6 +220,8 @@ public class LeafHnswWriter extends LeafHnsw {
 
             IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
 
+            //if neighbor also has lower than limit number of connections than just add
+            //new connections, no update needed.
             if (outNeighbourConnsAtLevel.size() < bestN) {
 
                 if (removeEnabled) {
@@ -225,8 +229,13 @@ public class LeafHnswWriter extends LeafHnsw {
                 }
 
                 outNeighbourConnsAtLevel.add(newNodeId);
-            } else {
-                // finding the "weakest" element to replace it with the new one
+            }
+            // if update is needed:
+            // add the new connection to the set of existing ones,
+            // then pick out the top limited number allowed, the
+            // new conn may be left out or not.
+            else {
+
 
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
@@ -248,6 +257,7 @@ public class LeafHnswWriter extends LeafHnsw {
                 if (removeEnabled) {
                     newNode.inConns[level].add(selectedNeighbourId);
                 }
+
 
                 outNeighbourConnsAtLevel.clear();
                 while (!candidates.isEmpty()) {
@@ -321,29 +331,27 @@ public class LeafHnswWriter extends LeafHnsw {
         try {
             PriorityQueue<Candidate> topCandidates =
                     new PriorityQueue<>(Comparator.<Candidate>naturalOrder().reversed());
-            PriorityQueue<Candidate> candidateSet = new PriorityQueue<>();
+            PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
             double distance = distanceFunction.distance(destination, entryPointNode.vector());
 
             Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
 
             topCandidates.add(firstCandidade);
-            candidateSet.add(firstCandidade);
+            checkNeighborSet.add(firstCandidade);
             visitedBitSet.flipTrue(entryPointNode.internalId);
 
             double lowerBound = distance;
 
-            while (!candidateSet.isEmpty()) {
+            while (!checkNeighborSet.isEmpty()) {
 
-                Candidate curCandidate = candidateSet.poll();
+                Candidate nodeWithNeighbors = checkNeighborSet.poll();
 
-                if (greater(curCandidate.distance, lowerBound)) {
+                if (greater(nodeWithNeighbors.distance, lowerBound)) {
                     break;
                 }
 
-                Node node = nodes[curCandidate.nodeId];
-
-                MutableIntList candidates = node.outConns[layer];
+                MutableIntList candidates = nodes[nodeWithNeighbors.nodeId].outConns[layer];
 
                 for (int i = 0; i < candidates.size(); i++) {
 
@@ -360,7 +368,7 @@ public class LeafHnswWriter extends LeafHnsw {
 
                             Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
 
-                            candidateSet.add(newCandidate);
+                            checkNeighborSet.add(newCandidate);
                             topCandidates.add(newCandidate);
 
                             if (topCandidates.size() > k) {

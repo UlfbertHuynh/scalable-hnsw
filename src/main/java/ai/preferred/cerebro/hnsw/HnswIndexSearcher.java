@@ -1,11 +1,8 @@
 package ai.preferred.cerebro.hnsw;
 
-import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.*;
 import org.apache.lucene.util.ThreadInterruptedException;
 
-import javax.management.Query;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -15,10 +12,10 @@ public class HnswIndexSearcher extends ParentHnsw {
         super(idxDir);
         executor = Executors.newFixedThreadPool(nleaves);
         int maxNodeCount = 0;
-        leaves = new LeafHnswSearcher[nleaves];
+        leaves = new LeafSegmentSearcher[nleaves];
         //load all leaves
         for (int i = 0; i < nleaves; i++) {
-            leaves[i] = new LeafHnswSearcher(this, i, idxDir);
+            leaves[i] = new LeafSegmentSearcher(this, i, idxDir);
             if (leaves[i].getNodeCount() > maxNodeCount)
                 maxNodeCount = leaves[i].getNodeCount();
         }
@@ -32,7 +29,7 @@ public class HnswIndexSearcher extends ParentHnsw {
 
         final List<Future<TopDocs>> topDocsFutures = new ArrayList<>(nleaves);
         for (int i = 0; i < nleaves; ++i) {
-            LeafHnswSearcher leaf = (LeafHnswSearcher) leaves[i];
+            LeafSegmentSearcher leaf = (LeafSegmentSearcher) leaves[i];
             topDocsFutures.add(executor.submit(new Callable<TopDocs>() {
                 @Override
                 public TopDocs call() throws Exception {
