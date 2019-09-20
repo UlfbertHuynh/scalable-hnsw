@@ -37,13 +37,13 @@ public final class HnswIndexWriter extends ParentHnsw
             nleaves = OPTIMAL_NUM_LEAVES;
         lookup = new ConcurrentHashMap<>(nleaves * configuration.maxItemLeaf);
 
-        leaves = new LeafHnswWriter[nleaves];
+        leaves = new LeafSegmentWriter[nleaves];
         int baseNewLeaf = 0;
         for (int i = 0; i < nleaves; i++) {
             if (configuration.lowMemoryMode)
-                leaves[i] = new SynchedLeafHnswWriter(this, i, baseNewLeaf);
+                leaves[i] = new BlockingLeafSegmentWriter(this, i, baseNewLeaf);
             else
-                leaves[i] = new LeafHnswWriter(this, i, baseNewLeaf);
+                leaves[i] = new LeafSegmentWriter(this, i, baseNewLeaf);
             baseNewLeaf += configuration.maxItemLeaf;
         }
 
@@ -56,7 +56,7 @@ public final class HnswIndexWriter extends ParentHnsw
         this.visitedBitSetPool = new GenericObjectPool<>(() -> new BitSet(configuration.maxItemLeaf), nleaves);
         //load all leaves
         for (int i = 0; i < nleaves; i++) {
-            leaves[i] = new LeafHnswWriter(this, i, idxDir);
+            leaves[i] = new LeafSegmentWriter(this, i, idxDir);
         }
     }
 
@@ -66,8 +66,17 @@ public final class HnswIndexWriter extends ParentHnsw
     }
 
 
-    private SynchedLeafHnswWriter addLeaf(){
-        return (SynchedLeafHnswWriter) (leaves[nleaves] = new SynchedLeafHnswWriter(this, nleaves,configuration.maxItemLeaf * nleaves++));
+    private synchronized boolean addLeaf(int idxLeafInAction){
+        if (idxLeafInAction == nleaves - 1) {
+            System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
+            leaves[nleaves] = new BlockingLeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            return true;
+        }
+        else if(idxLeafInAction < nleaves - 1){
+            return false;
+        }
+        else
+            throw new IllegalArgumentException("In-action leaf's index should not be greater than the number of leaves minus one");
     }
 /*
     private synchronized SynchronizedLeafHnswWriter chooseLeaf(){
@@ -93,7 +102,7 @@ public final class HnswIndexWriter extends ParentHnsw
         int leafNum = globalID / configuration.maxItemLeaf;
         int internalID = globalID % configuration.maxItemLeaf;
         lookup.remove(externalID);
-        ((LeafHnswWriter)leaves[leafNum]).removeOnInternalID(internalID);
+        ((LeafSegmentWriter)leaves[leafNum]).removeOnInternalID(internalID);
     }
 
 
@@ -163,7 +172,7 @@ public final class HnswIndexWriter extends ParentHnsw
 
             for (int threadId = 0; threadId < numThreads; threadId++)
                 executorService.submit(
-                        new InsertItemTask((LeafHnswWriter)leaves[threadId],
+                        new InsertItemTask((LeafSegmentWriter)leaves[threadId],
                                 queue,
                                 throwableHolder,
                                 workDone,
@@ -193,7 +202,7 @@ public final class HnswIndexWriter extends ParentHnsw
             Queue<Item> queue = new LinkedBlockingDeque<>(items);
 
             CountDownLatch latch = new CountDownLatch(numThreads);
-
+            //final AtomicInteger idxleafInAction = new AtomicInteger(nleaves - 1);
             for (int threadId = 0; threadId < numThreads; threadId++) {
 
                 executorService.submit(() -> {
@@ -201,7 +210,7 @@ public final class HnswIndexWriter extends ParentHnsw
                     Item item;
                     while(throwableHolder.get() == null && (item = queue.poll()) != null) {
                         try {
-                            boolean signal = ((SynchedLeafHnswWriter)leaves[idxleafInAction]).add(item);
+                            boolean signal = ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
                             if (signal){
                                 int done = workDone.incrementAndGet();
 
@@ -212,10 +221,9 @@ public final class HnswIndexWriter extends ParentHnsw
                             //here we assume that add(item) return false when
                             //the segment when reached its maximum capacity
                             else {
-                                System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
-                                addLeaf();
-                                idxleafInAction++;
-                                ((SynchedLeafHnswWriter)leaves[idxleafInAction]).add(item);
+                                addLeaf(idxleafInAction);
+                                ++idxleafInAction;
+                                ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
                             }
                         } catch (RuntimeException t) {
                             throwableHolder.set(t);
@@ -270,7 +278,7 @@ public final class HnswIndexWriter extends ParentHnsw
             }
         }
         for (int i = 0; i < nleaves; i++) {
-            ((LeafHnswWriter)leaves[i]).save(idxDir);
+            ((LeafSegmentWriter)leaves[i]).save(idxDir);
         }
     }
 
@@ -281,9 +289,9 @@ public final class HnswIndexWriter extends ParentHnsw
         final private AtomicInteger workDone;
         final private CountDownLatch latch;
         final private ProgressListener listener;
-        private LeafHnswWriter leaf;
+        private LeafSegmentWriter leaf;
         final private int max;
-        InsertItemTask(LeafHnswWriter leaf,
+        InsertItemTask(LeafSegmentWriter leaf,
                        Queue<Item> itemQueue,
                        AtomicReference<RuntimeException> throwableHolder,
                        AtomicInteger workDone,

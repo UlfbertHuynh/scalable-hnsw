@@ -19,7 +19,7 @@ import java.util.concurrent.locks.StampedLock;
 
 //Instead use HnswIndexWriter to spread your vectors out in many graphs, the number of graphs to spread out your nodes
 //should be the number of cores your CPU has. This will give you both good index building time and good search time.
-public class SynchedLeafHnswWriter extends LeafHnswWriter{
+public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
 
     private ReentrantLock globalLock;
     private StampedLock stampedLock;
@@ -27,7 +27,7 @@ public class SynchedLeafHnswWriter extends LeafHnswWriter{
     private AtomicReferenceArray<Node> nodes;
 
     //Create constructor
-    public SynchedLeafHnswWriter(HnswIndexWriter parent, int numName, int base) {
+    public BlockingLeafSegmentWriter(HnswIndexWriter parent, int numName, int base) {
         super(parent, numName, base);
         this.globalLock = new ReentrantLock();
         this.stampedLock = new StampedLock();
@@ -37,7 +37,7 @@ public class SynchedLeafHnswWriter extends LeafHnswWriter{
     }
 
     //Load constructor
-    public SynchedLeafHnswWriter(HnswIndexWriter parent, int numName , String idxDir) {
+    public BlockingLeafSegmentWriter(HnswIndexWriter parent, int numName , String idxDir) {
         super(parent, numName, idxDir);
 
         this.globalLock = new ReentrantLock();
@@ -90,7 +90,8 @@ public class SynchedLeafHnswWriter extends LeafHnswWriter{
             if (entryPoint == node) {
                 entryPoint = null;
             }
-
+            if(lookup.contains(node.item.externalId))
+                lookup.remove(node.item.externalId);
             nodes.set(internalID, null);
 
             //no need to put freedIds inside a synchronized block because

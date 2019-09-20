@@ -3,7 +3,6 @@ package ai.preferred.cerebro.hnsw;
 
 import ai.preferred.cerebro.ConcurrentWriter;
 import ai.preferred.cerebro.DistanceFunction;
-import ai.preferred.cerebro.DoubleDistanceFunctions;
 
 import ai.preferred.cerebro.IndexUtils;
 import com.esotericsoftware.kryo.Kryo;
@@ -14,7 +13,6 @@ import org.eclipse.collections.impl.stack.mutable.primitive.IntArrayStack;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
 
@@ -25,7 +23,7 @@ import static ai.preferred.cerebro.IndexConst.Sp;
  * @see <a href="https://arxiv.org/abs/1603.09320">
  * Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs</a>
  */
-abstract class LeafHnsw {
+abstract class LeafSegment {
     //constants
     protected final String LOCAL_CONFIG;
     protected final String LOCAL_DELETED;
@@ -66,8 +64,8 @@ abstract class LeafHnsw {
         SEARCH
     }
     Mode mode;
-    private LeafHnsw(ParentHnsw parent,
-                     int numName){
+    private LeafSegment(ParentHnsw parent,
+                        int numName){
         HnswConfiguration configuration = parent.getConfiguration();
         this.maxNodeCount = configuration.maxItemLeaf;
         this.distanceFunction = configuration.distanceFunction;
@@ -93,8 +91,8 @@ abstract class LeafHnsw {
     }
 
     //Creation Constructor
-    LeafHnsw(ParentHnsw parent,
-             int numName, int baseID) {
+    LeafSegment(ParentHnsw parent,
+                int numName, int baseID) {
         this(parent, numName);
         this.nodes = new Node[this.maxNodeCount];
         this.freedIds = new IntArrayStack();
@@ -104,9 +102,9 @@ abstract class LeafHnsw {
 
 
     //Load constructor
-     LeafHnsw(ParentHnsw parent,
-              int numName,
-              String idxDir, Mode mode){
+     LeafSegment(ParentHnsw parent,
+                 int numName,
+                 String idxDir, Mode mode){
         this(parent, numName);
         this.mode = mode;
         load(idxDir);

@@ -5,7 +5,6 @@ import com.esotericsoftware.kryo.io.Input;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
@@ -19,7 +18,7 @@ abstract class ParentHnsw {
     protected int nleaves;
     protected ConcurrentHashMap<Integer, Integer> lookup;
     protected GenericObjectPool<BitSet> visitedBitSetPool;
-    protected LeafHnsw[] leaves;
+    protected LeafSegment[] leaves;
 
     ParentHnsw(){
     }
