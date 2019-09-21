@@ -146,7 +146,7 @@ abstract class LeafSegment {
         return distanceComparator.compare(x, y) > 0;
     }
 
-    abstract PriorityQueue<Candidate> searchLayer(Node entryPointNode, double[] destination, int k, int layer);
+    abstract RestrictedMaxHeap searchLayer(Node entryPointNode, double[] destination, int k, int layer);
 
     private boolean checkCorruptedIndex(File configFile, File deletedIdFile,
                                         File inConnectionFile, File outConnectionFile,

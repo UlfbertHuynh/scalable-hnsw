@@ -94,7 +94,7 @@ public class TestHnsw {
             }
             if(returnIDs.retainAll(setBrute)){
                 totalHit += returnIDs.size();
-                System.out.println("Overlapp between brute and and hash (over top 20) is : " + returnIDs.size());
+                System.out.println("Overlapp between brute and hash (over top 20) is : " + returnIDs.size());
             }
             System.out.println(" ");
 
