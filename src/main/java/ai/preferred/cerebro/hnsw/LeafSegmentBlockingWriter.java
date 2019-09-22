@@ -19,7 +19,7 @@ import java.util.concurrent.locks.StampedLock;
 
 //Instead use HnswIndexWriter to spread your vectors out in many graphs, the number of graphs to spread out your nodes
 //should be the number of cores your CPU has. This will give you both good index building time and good search time.
-public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
+public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
     private ReentrantLock globalLock;
     private StampedLock stampedLock;
@@ -27,7 +27,7 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
     private AtomicReferenceArray<Node> nodes;
 
     //Create constructor
-    public BlockingLeafSegmentWriter(HnswIndexWriter parent, int numName, int base) {
+    public LeafSegmentBlockingWriter(HnswIndexWriter parent, int numName, int base) {
         super(parent, numName, base);
         this.globalLock = new ReentrantLock();
         this.stampedLock = new StampedLock();
@@ -37,7 +37,7 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
     }
 
     //Load constructor
-    public BlockingLeafSegmentWriter(HnswIndexWriter parent, int numName , String idxDir) {
+    public LeafSegmentBlockingWriter(HnswIndexWriter parent, int numName , String idxDir) {
         super(parent, numName, idxDir);
 
         this.globalLock = new ReentrantLock();
@@ -238,7 +238,7 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
                     }
                     //insert the new node starting from its highest layer by setting up connections
                     for (int level = Math.min(randomLevel, entryPointCopy.maxLevel()); level >= 0; level--) {
-                        PriorityQueue<Candidate> topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
+                        RestrictedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
                         synchronized (newNode) {
                             mutuallyConnectNewElement(newNode, topCandidates, level);
                         }
@@ -274,7 +274,7 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
 
     @Override
     protected void mutuallyConnectNewElement(Node newNode,
-                                           PriorityQueue<Candidate> topCandidates,
+                                           RestrictedMaxHeap topCandidates,
                                            int level) {
 
         int bestN = level == 0 ? this.maxM0 : this.maxM;
@@ -283,17 +283,16 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
         double[] newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
-        getNeighborsByHeuristic2(topCandidates, null, bestN);
+        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
 
-        while (!topCandidates.isEmpty()) {
-            int selectedNeighbourId = topCandidates.poll().nodeId;
+        for (Candidate selected: selectedNeighbors) {
+            int selectedNeighbourId = selected.nodeId;
 
             synchronized (activeConstruction) {
                 if (activeConstruction.isTrue(selectedNeighbourId)) {
                     continue;
                 }
             }
-
             outNewNodeConns.add(selectedNeighbourId);
 
             Node neighbourNode = nodes.get(selectedNeighbourId);
@@ -309,15 +308,34 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
                 IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
 
                 if (outNeighbourConnsAtLevel.size() < bestN) {
-
                     if (removeEnabled) {
                         newNode.inConns[level].add(selectedNeighbourId);
                     }
-
                     outNeighbourConnsAtLevel.add(newNodeId);
                 } else {
                     // finding the "weakest" element to replace it with the new one
+                    RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN, ()-> new Candidate(true));
 
+                    outNeighbourConnsAtLevel.forEach(id -> {
+                        double dist = distanceFunction.distance(neighbourVector, nodes.get(id).vector());
+                        candidates.updateTop(new Candidate(id, dist, distanceComparator));
+                    });
+
+                    double dis = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                    if (greater(candidates.top().distance, dis)) {
+                        Candidate ejectedConnection = candidates.top();
+                        candidates.updateTop(new Candidate(newNodeId, dis, distanceComparator));
+                        outNeighbourConnsAtLevel.clear();
+                        outNeighbourConnsAtLevel.addAll(candidates.getCandidateIds());
+                        if (removeEnabled) {
+                            newNode.inConns[level].add(selectedNeighbourId);
+                            Node node = nodes.get(ejectedConnection.nodeId);
+                            synchronized (node){
+                                node.inConns[level].remove(selectedNeighbourId);
+                            }
+                        }
+                    }
+                    /*
                     double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
                     Comparator<Candidate> comparator = Comparator
@@ -351,88 +369,37 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
                                 node.inConns[level].remove(selectedNeighbourId);
                             }
                         });
-                    }
+                    }*/
                 }
             }
         }
+
     }
 
     @Override
-    protected void getNeighborsByHeuristic2(PriorityQueue<Candidate> topCandidates,
-                                          MutableIntList prunedConnections,
-                                          int m) {
-
-        if (topCandidates.size() < m) {
-            return;
-        }
-
-        PriorityQueue<Candidate> queueClosest = new PriorityQueue<>();
-        List<Candidate> returnList = new ArrayList<>();
-
-        while (!topCandidates.isEmpty()) {
-            queueClosest.add(topCandidates.poll());
-        }
-
-        while (!queueClosest.isEmpty()) {
-            Candidate currentPair = queueClosest.poll();
-
-            boolean good;
-            if (returnList.size() >= m) {
-                good = false;
-            } else {
-                double distToQuery = currentPair.distance;
-
-                good = true;
-                for (Candidate secondPair : returnList) {
-
-                    double curdist = distanceFunction.distance(
-                            nodes.get(secondPair.nodeId).vector(),
-                            nodes.get(currentPair.nodeId).vector()
-                    );
-
-                    if (lesser(curdist, distToQuery)) {
-                        good = false;
-                        break;
-                    }
-
-                }
-            }
-            if (good) {
-                returnList.add(currentPair);
-            } else {
-                if (prunedConnections != null) {
-                    prunedConnections.add(currentPair.nodeId);
-                }
-            }
-        }
-
-        topCandidates.addAll(returnList);
-    }
-
-    @Override
-    protected PriorityQueue<Candidate> searchLayer(
+    protected RestrictedMaxHeap searchLayer(
             Node entryPointNode, double[] destination, int k, int layer) {
 
         BitSet visitedBitSet = parent.getBitsetFromPool();
 
         try {
-            PriorityQueue<Candidate> topCandidates =
-                    new PriorityQueue<>(Comparator.<Candidate>naturalOrder().reversed());
-            PriorityQueue<Candidate> candidateSet = new PriorityQueue<>();
+            RestrictedMaxHeap topCandidates =
+                    new RestrictedMaxHeap(k, ()-> null);
+            PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
             double distance = distanceFunction.distance(destination, entryPointNode.vector());
 
             Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
 
             topCandidates.add(firstCandidade);
-            candidateSet.add(firstCandidade);
+            checkNeighborSet.add(firstCandidade);
             visitedBitSet.flipTrue(entryPointNode.internalId);
 
             double lowerBound = distance;
 
-            while (!candidateSet.isEmpty()) {
+            while (!checkNeighborSet.isEmpty()) {
 
-                Candidate curCandidate = candidateSet.poll();
+                Candidate curCandidate = checkNeighborSet.poll();
 
                 if (greater(curCandidate.distance, lowerBound)) {
                     break;
@@ -455,18 +422,17 @@ public class BlockingLeafSegmentWriter extends LeafSegmentWriter {
                             double candidateDistance = distanceFunction.distance(destination,
                                     nodes.get(candidateId).vector());
 
-                            if (greater(topCandidates.peek().distance, candidateDistance) || topCandidates.size() < k) {
+                            if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
 
                                 Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
 
-                                candidateSet.add(newCandidate);
-                                topCandidates.add(newCandidate);
+                                checkNeighborSet.add(newCandidate);
+                                if (topCandidates.size() == k)
+                                    topCandidates.updateTop(newCandidate);
+                                else
+                                    topCandidates.add(newCandidate);
 
-                                if (topCandidates.size() > k) {
-                                    topCandidates.poll();
-                                }
-
-                                lowerBound = topCandidates.peek().distance;
+                                lowerBound = topCandidates.top().distance;
                             }
                         }
                     }

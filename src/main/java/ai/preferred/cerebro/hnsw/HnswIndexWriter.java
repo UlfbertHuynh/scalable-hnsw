@@ -41,7 +41,7 @@ public final class HnswIndexWriter extends ParentHnsw
         int baseNewLeaf = 0;
         for (int i = 0; i < nleaves; i++) {
             if (configuration.lowMemoryMode)
-                leaves[i] = new BlockingLeafSegmentWriter(this, i, baseNewLeaf);
+                leaves[i] = new LeafSegmentBlockingWriter(this, i, baseNewLeaf);
             else
                 leaves[i] = new LeafSegmentWriter(this, i, baseNewLeaf);
             baseNewLeaf += configuration.maxItemLeaf;
@@ -69,7 +69,7 @@ public final class HnswIndexWriter extends ParentHnsw
     private synchronized boolean addLeaf(int idxLeafInAction){
         if (idxLeafInAction == nleaves - 1) {
             System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
-            leaves[nleaves] = new BlockingLeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            leaves[nleaves] = new LeafSegmentBlockingWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
             return true;
         }
         else if(idxLeafInAction < nleaves - 1){
@@ -210,7 +210,7 @@ public final class HnswIndexWriter extends ParentHnsw
                     Item item;
                     while(throwableHolder.get() == null && (item = queue.poll()) != null) {
                         try {
-                            boolean signal = ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
+                            boolean signal = ((LeafSegmentBlockingWriter)leaves[idxleafInAction]).add(item);
                             if (signal){
                                 int done = workDone.incrementAndGet();
 
@@ -223,7 +223,7 @@ public final class HnswIndexWriter extends ParentHnsw
                             else {
                                 addLeaf(idxleafInAction);
                                 ++idxleafInAction;
-                                ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
+                                ((LeafSegmentBlockingWriter)leaves[idxleafInAction]).add(item);
                             }
                         } catch (RuntimeException t) {
                             throwableHolder.set(t);

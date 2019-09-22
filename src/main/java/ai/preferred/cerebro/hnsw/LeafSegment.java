@@ -7,6 +7,7 @@ import ai.preferred.cerebro.DistanceFunction;
 import ai.preferred.cerebro.IndexUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.eclipse.collections.impl.stack.mutable.primitive.IntArrayStack;
 
@@ -49,7 +50,7 @@ abstract class LeafSegment {
     protected int maxM0;//number of connections allowed each node in base layer - default to twice
     protected double levelLambda; //constant involved in nodes randomizing
     protected int ef;
-    protected int efConstruction;
+    protected int efConstruction; //the size of the set of closest candidates that the heuristic choose from to connect with the new node
     protected boolean removeEnabled;
     protected int maxNodeCount;
 
@@ -146,7 +147,68 @@ abstract class LeafSegment {
         return distanceComparator.compare(x, y) > 0;
     }
 
-    abstract RestrictedMaxHeap searchLayer(Node entryPointNode, double[] destination, int k, int layer);
+    protected RestrictedMaxHeap searchLayer(Node entryPointNode, double[] destination, int k, int layer){
+        BitSet visitedBitSet = parent.getBitsetFromPool();
+        try {
+            //a priority queue which can not grow past the initial capacity
+            RestrictedMaxHeap topCandidates =
+                    new RestrictedMaxHeap(k, ()-> null);
+
+            PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
+
+            double distance = distanceFunction.distance(destination, entryPointNode.vector());
+
+            Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
+
+            topCandidates.add(firstCandidade);
+            checkNeighborSet.add(firstCandidade);
+            visitedBitSet.flipTrue(entryPointNode.internalId);
+
+            double lowerBound = distance;
+
+            while (!checkNeighborSet.isEmpty()) {
+
+                Candidate nodeWithNeighbors = checkNeighborSet.poll();
+
+                if (greater(nodeWithNeighbors.distance, lowerBound)) {
+                    break;
+                }
+
+                MutableIntList candidates = nodes[nodeWithNeighbors.nodeId].outConns[layer];
+
+                for (int i = 0; i < candidates.size(); i++) {
+
+                    int candidateId = candidates.get(i);
+
+                    if (!visitedBitSet.isTrue(candidateId)) {
+
+                        visitedBitSet.flipTrue(candidateId);
+
+                        double candidateDistance = distanceFunction.distance(destination,
+                                nodes[candidateId].vector());
+
+                        if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
+
+                            Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
+
+                            checkNeighborSet.add(newCandidate);
+                            if (topCandidates.size() == k)
+                                topCandidates.updateTop(newCandidate);
+                            else
+                                topCandidates.add(newCandidate);
+
+                            lowerBound = topCandidates.top().distance;
+                        }
+                    }
+                }
+            }
+
+            return topCandidates;
+        } finally {
+            visitedBitSet.clear();
+            parent.returnBitsetToPool(visitedBitSet);
+        }
+    }
 
     private boolean checkCorruptedIndex(File configFile, File deletedIdFile,
                                         File inConnectionFile, File outConnectionFile,

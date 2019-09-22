@@ -221,7 +221,6 @@ public class LeafSegmentWriter extends LeafSegment {
 
             if (removeEnabled) {
                 neighbourNode.inConns[level].add(newNodeId);
-                newNode.inConns[level].add(selectedNeighbourId);
             }
 
             double[] neighbourVector = neighbourNode.vector();
@@ -230,6 +229,9 @@ public class LeafSegmentWriter extends LeafSegment {
             //if neighbor also has lower than limit number of connections than just add
             //new connections, no update needed.
             if (outNeighbourConnsAtLevel.size() < bestN) {
+                if (removeEnabled) {
+                    newNode.inConns[level].add(selectedNeighbourId);
+                }
                 outNeighbourConnsAtLevel.add(newNodeId);
             }
             // if update is needed:
@@ -252,6 +254,7 @@ public class LeafSegmentWriter extends LeafSegment {
                     outNeighbourConnsAtLevel.clear();
                     outNeighbourConnsAtLevel.addAll(candidates.getCandidateIds());
                     if (removeEnabled) {
+                        newNode.inConns[level].add(selectedNeighbourId);
                         Node node = nodes[ejectedConnection.nodeId];
                         node.inConns[level].remove(selectedNeighbourId);
                     }
@@ -261,13 +264,6 @@ public class LeafSegmentWriter extends LeafSegment {
                 //to bestN + 1 already, and we need to pick out the top bestN. The difference of
                 //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
                 //getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
-                /*
-                while (!candidates.isEmpty()) {
-                    outNeighbourConnsAtLevel.add(candidates.poll().nodeId);
-                }
-
-                 */
-
             }
         }
     }
@@ -306,10 +302,10 @@ public class LeafSegmentWriter extends LeafSegment {
                 double distToQuery = candidate.distance;
 
                 good = true;
-                for (Candidate chosenOne : returnList) {
+                for (Candidate chosen : returnList) {
 
                     double curdist = distanceFunction.distance(
-                            nodes[chosenOne.nodeId].vector(),
+                            nodes[chosen.nodeId].vector(),
                             nodes[candidate.nodeId].vector()
                     );
 
@@ -329,72 +325,6 @@ public class LeafSegmentWriter extends LeafSegment {
             }
         }
         return returnList;
-    }
-
-
-
-    @Override
-    RestrictedMaxHeap searchLayer(Node entryPointNode, double[] destination, int k, int layer) {
-        BitSet visitedBitSet = parent.getBitsetFromPool();
-        try {
-            //a priority queue which can not grow past the initial capacity
-            RestrictedMaxHeap topCandidates =
-                    new RestrictedMaxHeap(k, ()-> null);
-
-            PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
-
-            double distance = distanceFunction.distance(destination, entryPointNode.vector());
-
-            Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
-
-            topCandidates.add(firstCandidade);
-            checkNeighborSet.add(firstCandidade);
-            visitedBitSet.flipTrue(entryPointNode.internalId);
-
-            double lowerBound = distance;
-
-            while (!checkNeighborSet.isEmpty()) {
-
-                Candidate nodeWithNeighbors = checkNeighborSet.poll();
-
-                if (greater(nodeWithNeighbors.distance, lowerBound)) {
-                    break;
-                }
-
-                MutableIntList candidates = nodes[nodeWithNeighbors.nodeId].outConns[layer];
-
-                for (int i = 0; i < candidates.size(); i++) {
-
-                    int candidateId = candidates.get(i);
-
-                    if (!visitedBitSet.isTrue(candidateId)) {
-
-                        visitedBitSet.flipTrue(candidateId);
-
-                        double candidateDistance = distanceFunction.distance(destination,
-                                nodes[candidateId].vector());
-
-                        if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
-
-                            Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
-
-                            checkNeighborSet.add(newCandidate);
-                            if (topCandidates.size() == k)
-                                topCandidates.updateTop(newCandidate);
-                            else
-                                topCandidates.add(newCandidate);
-
-                            lowerBound = topCandidates.top().distance;
-                        }
-                    }
-                }
-            }
-
-            return topCandidates;
-        } finally {
-            visitedBitSet.clear();
-            parent.returnBitsetToPool(visitedBitSet);
-        }
     }
 
     public void save(String dir){
