@@ -210,9 +210,12 @@ public class LeafSegmentWriter extends LeafSegment {
         //the idea of getNeighborsByHeuristic2() is to introduce a bit of change in which nodes
         //get to connect with our new nodes - not necessary the closest ones. As the authors say
         // in their paper "to make the graph more robust"
-        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
-        for (Candidate selected : selectedNeighbors) {
 
+
+        //List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        //for (Candidate selected : selectedNeighbors) {
+        while (topCandidates.size() != 0){
+            Candidate selected = topCandidates.pop();
             int selectedNeighbourId = selected.nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
@@ -241,7 +244,9 @@ public class LeafSegmentWriter extends LeafSegment {
             else {
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
-                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                //RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                Comparator<Candidate> comparator = Comparator.<Candidate>naturalOrder().reversed();
+                PriorityQueue<Candidate> candidates = new PriorityQueue<>(comparator);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
 
                 outNeighbourConnsAtLevel.forEach(id -> {
@@ -304,11 +309,18 @@ public class LeafSegmentWriter extends LeafSegment {
     //Originally the function return void, we get the selected neighbors in updated
     //topCandidates, this is wasteful as we don't need the data returned to be in the
     //format of a MaxHeap, simply an array will do.
-    protected List<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
+    protected /*List<Candidate>*/ void getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
                                                        MutableIntList prunedConnections,
                                                        int m) {
         if (topCandidates.size() < m) {
-            return Arrays.asList(topCandidates.getArray());
+            return;
+            /*
+            ArrayList<Candidate> list = new ArrayList<>(topCandidates.size());
+            while (topCandidates.size() !=0)
+                list.add(topCandidates.pop());
+            return list;//Arrays.asList(topCandidates.getArray());
+
+             */
         }
 
         Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());
@@ -357,7 +369,10 @@ public class LeafSegmentWriter extends LeafSegment {
                 }
             }
         }
-        return returnList;
+        for (Candidate c: returnList) {
+            topCandidates.add(c);
+        }
+        //return returnList;
     }
 
     public void save(String dir){

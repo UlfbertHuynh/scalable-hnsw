@@ -283,7 +283,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         double[] newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
-        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        List<Candidate> selectedNeighbors = null;//getNeighborsByHeuristic2(topCandidates, null, bestN);
 
         for (Candidate selected: selectedNeighbors) {
             int selectedNeighbourId = selected.nodeId;

@@ -10,11 +10,6 @@ public class test {
 
     @Test
     public void whatever(){
-        List<Integer> list = Collections.EMPTY_LIST;
-        for (Integer i: list
-             ) {
 
-            System.out.println("e");
-        }
     }
 }
