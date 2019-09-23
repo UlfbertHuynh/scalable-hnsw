@@ -12,9 +12,9 @@ public class TestHnsw {
     @Test
     public void testCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_MULTI + "6M";
+        String indexDir = IndexConst.HNSW_PATH_MULTI + "1M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_1M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -67,10 +67,11 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
+        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
+        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "1M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_4M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_1M.o");
         }
         catch (IOException e) {
             e.printStackTrace();
