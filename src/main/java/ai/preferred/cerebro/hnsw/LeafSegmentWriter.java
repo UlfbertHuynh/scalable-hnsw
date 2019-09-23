@@ -235,8 +235,6 @@ public class LeafSegmentWriter extends LeafSegment {
             // then pick out the top limited number allowed, the
             // new conn may be left out or not.
             else {
-
-
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
                 Comparator<Candidate> comparator = Comparator
@@ -251,7 +249,8 @@ public class LeafSegmentWriter extends LeafSegment {
                 });
 
                 MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
-
+                System.out.println(candidates.size());
+                System.out.println(bestN);
                 getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
 
                 if (removeEnabled) {
