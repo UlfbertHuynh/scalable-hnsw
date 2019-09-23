@@ -26,4 +26,5 @@ public class Candidate implements Comparable<Candidate>{
         return distanceComparator.compare(distance, o.distance);
     }
 
+
 }

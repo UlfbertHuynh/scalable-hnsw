@@ -8,10 +8,7 @@ import org.eclipse.collections.impl.stack.mutable.primitive.IntArrayStack;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class LeafSegmentWriter extends LeafSegment {
 
@@ -83,6 +80,7 @@ public class LeafSegmentWriter extends LeafSegment {
     }
 
     public boolean add(Item item) {
+        //System.out.println(item.externalId);
         //globalID is internalID + baseID of the segment
         Integer globalId = lookup.get(item.externalId);
 
@@ -194,6 +192,7 @@ public class LeafSegmentWriter extends LeafSegment {
             // this is thread safe because we get the global lock when we add a level
             this.entryPoint = newNode;
         }
+
         return true;
     }
 
@@ -212,7 +211,8 @@ public class LeafSegmentWriter extends LeafSegment {
         //get to connect with our new nodes - not necessary the closest ones. As the authors say
         // in their paper "to make the graph more robust"
         List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
-        for (Candidate selected: selectedNeighbors) {
+        for (Candidate selected : selectedNeighbors) {
+
             int selectedNeighbourId = selected.nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
@@ -239,7 +239,38 @@ public class LeafSegmentWriter extends LeafSegment {
             // then pick out the top limited number allowed, the
             // new conn may be left out or not.
             else {
+                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
+                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
+
+                outNeighbourConnsAtLevel.forEach(id -> {
+                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    candidates.add(new Candidate(id, dist, distanceComparator));
+                });
+
+                MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
+
+                getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+
+                if (removeEnabled) {
+                    newNode.inConns[level].add(selectedNeighbourId);
+                }
+
+
+                outNeighbourConnsAtLevel.clear();
+                while (candidates.size() != 0) {
+                    outNeighbourConnsAtLevel.add(candidates.pop().nodeId);
+                }
+
+                if (removeEnabled) {
+                    prunedConnections.forEach(id -> {
+                        Node node = nodes[id];
+                        node.inConns[level].remove(selectedNeighbourId);
+                    });
+                }
+
+                /*
                 RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN, ()-> new Candidate(true));
 
                 outNeighbourConnsAtLevel.forEach(id -> {
@@ -259,6 +290,8 @@ public class LeafSegmentWriter extends LeafSegment {
                         node.inConns[level].remove(selectedNeighbourId);
                     }
                 }
+
+                 */
                 //MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
                 //I don't think we need more robustness at this point as the set is now reduced
                 //to bestN + 1 already, and we need to pick out the top bestN. The difference of
@@ -275,7 +308,7 @@ public class LeafSegmentWriter extends LeafSegment {
                                                        MutableIntList prunedConnections,
                                                        int m) {
         if (topCandidates.size() < m) {
-            return null;
+            return Arrays.asList(topCandidates.getArray());
         }
 
         Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());

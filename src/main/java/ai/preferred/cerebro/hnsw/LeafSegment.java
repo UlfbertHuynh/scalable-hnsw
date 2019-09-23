@@ -167,7 +167,6 @@ abstract class LeafSegment {
             double lowerBound = distance;
 
             while (!checkNeighborSet.isEmpty()) {
-
                 Candidate nodeWithNeighbors = checkNeighborSet.poll();
 
                 if (greater(nodeWithNeighbors.distance, lowerBound)) {
