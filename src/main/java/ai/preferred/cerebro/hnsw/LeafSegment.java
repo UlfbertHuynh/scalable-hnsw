@@ -202,7 +202,6 @@ abstract class LeafSegment {
                     }
                 }
             }
-
             return topCandidates;
         } finally {
             visitedBitSet.clear();
