@@ -80,7 +80,7 @@ public class LeafSegmentWriter extends LeafSegment {
     }
 
     public boolean add(Item item) {
-        //globalID is internalID + baseID of the segment
+        // globalID is internalID + baseID of the segment
         Integer globalId = lookup.get(item.externalId);
 
         //check if there is nodes with similar id in the graph
