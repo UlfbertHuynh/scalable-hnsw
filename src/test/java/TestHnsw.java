@@ -67,10 +67,10 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "6M");
+        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_6M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_4M.o");
         }
         catch (IOException e) {
             e.printStackTrace();
