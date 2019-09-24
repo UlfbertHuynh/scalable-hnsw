@@ -310,10 +310,14 @@ public class LeafSegmentWriter extends LeafSegment {
                                                        MutableIntList prunedConnections,
                                                        int m) {
         if (topCandidates.size() < m) {
+            /*
             ArrayList<Candidate> list = new ArrayList<>(topCandidates.size());
             while (topCandidates.size() !=0)
                 list.add(topCandidates.pop());
             return list;
+
+             */
+            return topCandidates.getListOfNonNull();
         }
 
         Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());

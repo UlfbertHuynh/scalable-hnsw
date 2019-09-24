@@ -23,11 +23,11 @@ public class RestrictedMaxHeap extends PriorityQueue<Candidate> {
         }
         return ids;
     }
-    public Candidate[] getArray(){
+    public ArrayList<Candidate> getListOfNonNull(){
         Object[] raw = getHeapArray();
-        Candidate[] res = new Candidate[size()];
+        ArrayList<Candidate> res = new ArrayList<Candidate>(size());
         for (int i = 0; i < size(); i++) {
-            res[i] = (Candidate) raw[i + 1];
+            res.add((Candidate) raw[i + 1]);
         }
         return res;
     }
