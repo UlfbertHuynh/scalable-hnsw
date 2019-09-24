@@ -284,10 +284,10 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         double[] newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
-        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
-
-        for (Candidate selected: selectedNeighbors) {
-            int selectedNeighbourId = selected.nodeId;
+        Iterator<Candidate> iteratorSelected = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        while (iteratorSelected.hasNext()){
+        //for (Candidate selected: selectedNeighbors) {
+            int selectedNeighbourId = iteratorSelected.next().nodeId;
 
             synchronized (activeConstruction) {
                 if (activeConstruction.isTrue(selectedNeighbourId)) {
@@ -323,25 +323,26 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                         candidates.add(new Candidate(id, dist, distanceComparator));
                     });
 
-                    MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
-
-                    List<Candidate> selectedConns = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
-
                     if (removeEnabled) {
                         newNode.inConns[level].add(selectedNeighbourId);
                     }
 
+                    //I don't think we need more robustness at this point as the set is now reduced
+                    //to bestN + 1 already, and we need to pick out the top bestN. The difference of
+                    //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
+                    Candidate rejected = candidates.pop();
+
                     outNeighbourConnsAtLevel.clear();
-                    for (Candidate candidate: selectedConns) {
-                        outNeighbourConnsAtLevel.add(candidate.nodeId);
+                    Iterator<Candidate> iterator = candidates.iterator();
+                    while (iterator.hasNext()){
+                        outNeighbourConnsAtLevel.add(iterator.next().nodeId);
                     }
 
                     if (removeEnabled) {
-                        prunedConnections.forEach(id -> {
-                            Node node = nodes.get(id);
-                            node.inConns[level].remove(selectedNeighbourId);
-                        });
+                        Node node = nodes.get(rejected.nodeId);
+                        node.inConns[level].remove(selectedNeighbourId);
                     }
+
                 }
             }
         }
