@@ -246,6 +246,33 @@ public class LeafSegmentWriter extends LeafSegment {
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
+                if (removeEnabled) {
+                    newNode.inConns[level].add(selectedNeighbourId);
+                }
+
+
+                Candidate rejected = candidates.pop();
+                outNeighbourConnsAtLevel.clear();
+                while (candidates.size() != 0){
+                    outNeighbourConnsAtLevel.add(candidates.pop().nodeId);
+                }
+
+                if (removeEnabled) {
+                    Node node = nodes[rejected.nodeId];
+                    node.inConns[level].remove(selectedNeighbourId);
+                }
+
+
+                /* In case of desperation uncomment this section and delete everything above up till the start of the else clause
+
+                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
+                outNeighbourConnsAtLevel.forEach(id -> {
+                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    candidates.add(new Candidate(id, dist, distanceComparator));
+                });
+
                 MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
 
                 List<Candidate> selectedConns = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
@@ -265,29 +292,9 @@ public class LeafSegmentWriter extends LeafSegment {
                         node.inConns[level].remove(selectedNeighbourId);
                     });
                 }
-                /*
-                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN, ()-> new Candidate(true));
-
-                outNeighbourConnsAtLevel.forEach(id -> {
-                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
-                    candidates.updateTop(new Candidate(id, dist, distanceComparator));
-                });
-
-                double dis = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-                if (greater(candidates.top().distance, dis)) {
-                    Candidate ejectedConnection = candidates.top();
-                    candidates.updateTop(new Candidate(newNodeId, dis, distanceComparator));
-                    outNeighbourConnsAtLevel.clear();
-                    outNeighbourConnsAtLevel.addAll(candidates.getCandidateIds());
-                    if (removeEnabled) {
-                        newNode.inConns[level].add(selectedNeighbourId);
-                        Node node = nodes[ejectedConnection.nodeId];
-                        node.inConns[level].remove(selectedNeighbourId);
-                    }
-                }
 
                  */
-                //MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
+
                 //I don't think we need more robustness at this point as the set is now reduced
                 //to bestN + 1 already, and we need to pick out the top bestN. The difference of
                 //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
