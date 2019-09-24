@@ -169,11 +169,12 @@ public final class HnswIndexWriter extends ParentHnsw
         try{
             Queue<Item> queue = new LinkedBlockingDeque<>(items);
             CountDownLatch latch = new CountDownLatch(numThreads);
-
+            int maxsize = items.size();
             for (int threadId = 0; threadId < numThreads; threadId++)
                 executorService.submit(
                         new InsertItemTask((LeafSegmentWriter)leaves[threadId],
                                 queue,
+                                maxsize,
                                 throwableHolder,
                                 workDone,
                                 latch,
@@ -293,6 +294,7 @@ public final class HnswIndexWriter extends ParentHnsw
         final private int max;
         InsertItemTask(LeafSegmentWriter leaf,
                        Queue<Item> itemQueue,
+                       int maxsize,
                        AtomicReference<RuntimeException> throwableHolder,
                        AtomicInteger workDone,
                        CountDownLatch latch,
@@ -303,7 +305,7 @@ public final class HnswIndexWriter extends ParentHnsw
             this.workDone = workDone;
             this.latch = latch;
             this.listener = listener;
-            max = itemQueue.size();
+            max = maxsize;
         }
         @Override
         public void run() {
