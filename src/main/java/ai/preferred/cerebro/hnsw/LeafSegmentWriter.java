@@ -250,11 +250,15 @@ public class LeafSegmentWriter extends LeafSegment {
                     newNode.inConns[level].add(selectedNeighbourId);
                 }
 
-
+                //I don't think we need more robustness at this point as the set is now reduced
+                //to bestN + 1 already, and we need to pick out the top bestN. The difference of
+                //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
                 Candidate rejected = candidates.pop();
+
                 outNeighbourConnsAtLevel.clear();
-                while (candidates.size() != 0){
-                    outNeighbourConnsAtLevel.add(candidates.pop().nodeId);
+                Iterator<Candidate> iterator = candidates.iterator();
+                while (iterator.hasNext()){
+                    outNeighbourConnsAtLevel.add(iterator.next().nodeId);
                 }
 
                 if (removeEnabled) {
@@ -263,7 +267,8 @@ public class LeafSegmentWriter extends LeafSegment {
                 }
 
 
-                /* In case of desperation uncomment this section and delete everything above up till the start of the else clause
+                /* In case every breaks or accuracy plummets, uncomment this section
+                and delete everything above up till the start of the else clause
 
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
                 RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
@@ -291,14 +296,7 @@ public class LeafSegmentWriter extends LeafSegment {
                         Node node = nodes[id];
                         node.inConns[level].remove(selectedNeighbourId);
                     });
-                }
-
-                 */
-
-                //I don't think we need more robustness at this point as the set is now reduced
-                //to bestN + 1 already, and we need to pick out the top bestN. The difference of
-                //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
-                //getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+                }*/
             }
         }
     }
@@ -310,13 +308,6 @@ public class LeafSegmentWriter extends LeafSegment {
                                                        MutableIntList prunedConnections,
                                                        int m) {
         if (topCandidates.size() < m) {
-            /*
-            ArrayList<Candidate> list = new ArrayList<>(topCandidates.size());
-            while (topCandidates.size() !=0)
-                list.add(topCandidates.pop());
-            return list;
-
-             */
             return topCandidates.getListOfNonNull();
         }
 

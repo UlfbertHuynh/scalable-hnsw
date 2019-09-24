@@ -12,21 +12,29 @@ public class RestrictedMaxHeap extends PriorityQueue<Candidate> {
 
     @Override
     protected boolean lessThan(Candidate a, Candidate b) {
+        //originally lucene's implementation of PriorityQueue is a MinHeap
+        //and this function is used to determine if a get moved up in the
+        //heap. Here we want a max heap so we should check if a > b
         return a.distance > b.distance;
     }
 
     public int[] getCandidateIds(){
         Object [] arr = getHeapArray();
         int[] ids = new int[size()];
-        for (int i = 1; i < size(); i++) {
-            ids[i] = ((Candidate)arr[i]).nodeId;
+        for (int i = 0; i < size(); i++) {
+            //lucene's PriorityQueue start its array from 1
+            ids[i] = ((Candidate)arr[i + 1]).nodeId;
         }
         return ids;
     }
     public ArrayList<Candidate> getListOfNonNull(){
         Object[] raw = getHeapArray();
-        ArrayList<Candidate> res = new ArrayList<Candidate>(size());
+        //always call size() to know the number of elements
+        //in the heap, don't get it directly from the size
+        //of its internal array.
+        ArrayList<Candidate> res = new ArrayList<>(size());
         for (int i = 0; i < size(); i++) {
+            //lucene's PriorityQueue start its array from 1
             res.add((Candidate) raw[i + 1]);
         }
         return res;
