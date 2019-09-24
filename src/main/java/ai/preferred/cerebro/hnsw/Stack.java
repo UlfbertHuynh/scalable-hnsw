@@ -9,12 +9,6 @@ import java.util.Vector;
  * @param <E>
  */
 public class Stack<E> extends Vector<E> {
-    /**
-     * Creates an empty Stack.
-     */
-    public Stack() {
-    }
-
     public Stack(int initialCapacity) {
         super(initialCapacity);
     }
@@ -43,8 +37,8 @@ public class Stack<E> extends Vector<E> {
      * @throws EmptyStackException  if this stack is empty.
      */
     public E pop() {
-        E       obj;
-        int     len = size();
+        E obj;
+        int len = size();
 
         obj = peek();
         removeElementAt(len - 1);

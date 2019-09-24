@@ -18,7 +18,8 @@ import java.util.concurrent.locks.StampedLock;
 // exponentially with current number of nodes in the graph.
 
 //Instead use HnswIndexWriter to spread your vectors out in many graphs, the number of graphs to spread out your nodes
-//should be the number of cores your CPU has. This will give you both good index building time and good search time.
+//should be the number of cores your CPU has. This will give you both good index building time, good search time and
+// nearly double the accuracy (tested with a 6-core CPU).
 public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
     private ReentrantLock globalLock;

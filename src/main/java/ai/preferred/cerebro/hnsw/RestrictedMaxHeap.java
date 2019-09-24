@@ -20,24 +20,15 @@ public class RestrictedMaxHeap extends PriorityQueue<Candidate> {
 
     public int[] getCandidateIds(){
         Object [] arr = getHeapArray();
+        //always call size() to know the number of elements
+        //in the heap, don't get it directly from the size
+        //of its internal array.
         int[] ids = new int[size()];
         for (int i = 0; i < size(); i++) {
             //lucene's PriorityQueue start its array from 1
             ids[i] = ((Candidate)arr[i + 1]).nodeId;
         }
         return ids;
-    }
-    public ArrayList<Candidate> getListOfNonNull(){
-        Object[] raw = getHeapArray();
-        //always call size() to know the number of elements
-        //in the heap, don't get it directly from the size
-        //of its internal array.
-        ArrayList<Candidate> res = new ArrayList<>(size());
-        for (int i = 0; i < size(); i++) {
-            //lucene's PriorityQueue start its array from 1
-            res.add((Candidate) raw[i + 1]);
-        }
-        return res;
     }
 
 }

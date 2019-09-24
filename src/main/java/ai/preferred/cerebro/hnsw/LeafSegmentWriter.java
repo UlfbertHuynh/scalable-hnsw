@@ -210,12 +210,12 @@ public class LeafSegmentWriter extends LeafSegment {
         //the idea of getNeighborsByHeuristic2() is to introduce a bit of change in which nodes
         //get to connect with our new nodes - not necessary the closest ones. As the authors say
         // in their paper "to make the graph more robust"
-        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
-        for (Candidate selected : selectedNeighbors) {
-            int selectedNeighbourId = selected.nodeId;
+        Iterator<Candidate> iteratorSelected = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        while(iteratorSelected.hasNext()){
+        //for (Candidate selected : selectedNeighbors) {
+            int selectedNeighbourId = iteratorSelected.next().nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
-
             Node neighbourNode = nodes[selectedNeighbourId];
 
             if (removeEnabled) {
@@ -304,11 +304,11 @@ public class LeafSegmentWriter extends LeafSegment {
     //Originally the function return void, we get the selected neighbors in updated
     //topCandidates, this is wasteful as we don't need the data returned to be in the
     //format of a MaxHeap, simply an array will do.
-    protected List<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
+    protected Iterator<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
                                                        MutableIntList prunedConnections,
                                                        int m) {
-        if (topCandidates.size() < m) {
-            return topCandidates.getListOfNonNull();
+        if (topCandidates.size() <= m) {
+            return topCandidates.iterator();
         }
 
         Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());
@@ -354,7 +354,7 @@ public class LeafSegmentWriter extends LeafSegment {
                 }
             }
         }
-        return returnList;
+        return returnList.iterator();
     }
 
     public void save(String dir){
