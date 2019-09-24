@@ -210,12 +210,8 @@ public class LeafSegmentWriter extends LeafSegment {
         //the idea of getNeighborsByHeuristic2() is to introduce a bit of change in which nodes
         //get to connect with our new nodes - not necessary the closest ones. As the authors say
         // in their paper "to make the graph more robust"
-
-
-        //List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
-        //for (Candidate selected : selectedNeighbors) {
-        while (topCandidates.size() != 0){
-            Candidate selected = topCandidates.pop();
+        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        for (Candidate selected : selectedNeighbors) {
             int selectedNeighbourId = selected.nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
@@ -243,12 +239,8 @@ public class LeafSegmentWriter extends LeafSegment {
             // new conn may be left out or not.
             else {
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-
-                //RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
-                Comparator<Candidate> comparator = Comparator.<Candidate>naturalOrder().reversed();
-                PriorityQueue<Candidate> candidates = new PriorityQueue<>(comparator);
+                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
-
                 outNeighbourConnsAtLevel.forEach(id -> {
                     double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
@@ -256,16 +248,15 @@ public class LeafSegmentWriter extends LeafSegment {
 
                 MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
 
-                getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+                List<Candidate> selectedConns = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
 
                 if (removeEnabled) {
                     newNode.inConns[level].add(selectedNeighbourId);
                 }
 
-
                 outNeighbourConnsAtLevel.clear();
-                while (candidates.size() != 0) {
-                    outNeighbourConnsAtLevel.add(candidates.pop().nodeId);
+                for (Candidate candidate: selectedConns) {
+                    outNeighbourConnsAtLevel.add(candidate.nodeId);
                 }
 
                 if (removeEnabled) {
@@ -274,7 +265,6 @@ public class LeafSegmentWriter extends LeafSegment {
                         node.inConns[level].remove(selectedNeighbourId);
                     });
                 }
-
                 /*
                 RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN, ()-> new Candidate(true));
 
@@ -309,30 +299,23 @@ public class LeafSegmentWriter extends LeafSegment {
     //Originally the function return void, we get the selected neighbors in updated
     //topCandidates, this is wasteful as we don't need the data returned to be in the
     //format of a MaxHeap, simply an array will do.
-    protected /*List<Candidate>*/ void getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
+    protected List<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
                                                        MutableIntList prunedConnections,
                                                        int m) {
         if (topCandidates.size() < m) {
-            return;
-            /*
             ArrayList<Candidate> list = new ArrayList<>(topCandidates.size());
             while (topCandidates.size() !=0)
                 list.add(topCandidates.pop());
-            return list;//Arrays.asList(topCandidates.getArray());
-
-             */
+            return list;
         }
 
         Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());
         List<Candidate> returnList = new ArrayList<>(m);
 
-        //empty the entire MaxHeap by calling pop()
-        //will return the elements in descending order.
-        //the original algorithm use a MinHeap to pop
-        //out the element in ascending order with each
-        //call taking O(log(size)). The same can be achieved
-        //if we use a stack but even better as stack has
-        //constant time
+        //empty the entire MaxHeap by calling pop() will return the elements in descending order.
+        //The original algorithm use a MinHeap to pop out the element in ascending order with each
+        //call taking O(log(size)). The same can be achieved if we use a stack but even better as
+        //stack has constant time.
         while (topCandidates.size() != 0) {
             stackClosest.push(topCandidates.pop());
         }
@@ -369,10 +352,7 @@ public class LeafSegmentWriter extends LeafSegment {
                 }
             }
         }
-        for (Candidate c: returnList) {
-            topCandidates.add(c);
-        }
-        //return returnList;
+        return returnList;
     }
 
     public void save(String dir){

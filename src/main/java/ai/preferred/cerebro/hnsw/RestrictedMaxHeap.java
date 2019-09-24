@@ -19,7 +19,6 @@ public class RestrictedMaxHeap extends PriorityQueue<Candidate> {
         Object [] arr = getHeapArray();
         int[] ids = new int[size()];
         for (int i = 1; i < size(); i++) {
-            //ids.add(((Item)arr[i + 1])._id);
             ids[i] = ((Candidate)arr[i]).nodeId;
         }
         return ids;

@@ -283,7 +283,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         double[] newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
-        List<Candidate> selectedNeighbors = null;//getNeighborsByHeuristic2(topCandidates, null, bestN);
+        List<Candidate> selectedNeighbors = getNeighborsByHeuristic2(topCandidates, null, bestN);
 
         for (Candidate selected: selectedNeighbors) {
             int selectedNeighbourId = selected.nodeId;
@@ -314,36 +314,9 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                     outNeighbourConnsAtLevel.add(newNodeId);
                 } else {
                     // finding the "weakest" element to replace it with the new one
-                    RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN, ()-> new Candidate(true));
-
-                    outNeighbourConnsAtLevel.forEach(id -> {
-                        double dist = distanceFunction.distance(neighbourVector, nodes.get(id).vector());
-                        candidates.updateTop(new Candidate(id, dist, distanceComparator));
-                    });
-
-                    double dis = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-                    if (greater(candidates.top().distance, dis)) {
-                        Candidate ejectedConnection = candidates.top();
-                        candidates.updateTop(new Candidate(newNodeId, dis, distanceComparator));
-                        outNeighbourConnsAtLevel.clear();
-                        outNeighbourConnsAtLevel.addAll(candidates.getCandidateIds());
-                        if (removeEnabled) {
-                            newNode.inConns[level].add(selectedNeighbourId);
-                            Node node = nodes.get(ejectedConnection.nodeId);
-                            synchronized (node){
-                                node.inConns[level].remove(selectedNeighbourId);
-                            }
-                        }
-                    }
-                    /*
                     double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-
-                    Comparator<Candidate> comparator = Comparator
-                            .<Candidate>naturalOrder().reversed();
-
-                    PriorityQueue<Candidate> candidates = new PriorityQueue<>(comparator);
+                    RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
                     candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
-
                     outNeighbourConnsAtLevel.forEach(id -> {
                         double dist = distanceFunction.distance(neighbourVector, nodes.get(id).vector());
                         candidates.add(new Candidate(id, dist, distanceComparator));
@@ -351,25 +324,23 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
                     MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
 
-                    getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+                    List<Candidate> selectedConns = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
 
                     if (removeEnabled) {
                         newNode.inConns[level].add(selectedNeighbourId);
                     }
 
                     outNeighbourConnsAtLevel.clear();
-                    while (!candidates.isEmpty()) {
-                        outNeighbourConnsAtLevel.add(candidates.poll().nodeId);
+                    for (Candidate candidate: selectedConns) {
+                        outNeighbourConnsAtLevel.add(candidate.nodeId);
                     }
 
                     if (removeEnabled) {
                         prunedConnections.forEach(id -> {
                             Node node = nodes.get(id);
-                            synchronized (node.inConns) {
-                                node.inConns[level].remove(selectedNeighbourId);
-                            }
+                            node.inConns[level].remove(selectedNeighbourId);
                         });
-                    }*/
+                    }
                 }
             }
         }
