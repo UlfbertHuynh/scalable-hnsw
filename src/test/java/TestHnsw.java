@@ -42,9 +42,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_SINGLE + "4M";
+        String indexDir = IndexConst.HNSW_PATH_SINGLE + "1M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_4M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_1M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -54,10 +54,10 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        configuration.setM(20);
-        configuration.setEf(20);
-        configuration.setEfConstruction(400);
-        configuration.setMaxItemLeaf(4_000_000);
+        //configuration.setM(20);
+        //configuration.setEf(20);
+        //configuration.setEfConstruction(400);
+        //configuration.setMaxItemLeaf(4_000_000);
         configuration.setLowMemoryMode(true);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
@@ -73,7 +73,7 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
+        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "1M");
         HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "1M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
@@ -97,7 +97,6 @@ public class TestHnsw {
             totalTime += endSearchTime - startTime;
             ArrayList<Integer> returnIDs = new ArrayList<>();
             for (int i = 0; i < res.scoreDocs.length; i++) {
-
                 returnIDs.add(res.scoreDocs[i].doc);
             }
             if(returnIDs.retainAll(setBrute)){
@@ -105,7 +104,6 @@ public class TestHnsw {
                 System.out.println("Overlapp between brute and hash (over top 20) is : " + returnIDs.size());
             }
             System.out.println(" ");
-
         }
         System.out.println("Average search time :" + totalTime/(1000));
         System.out.println("Average overlap :" + totalHit/(1000));
