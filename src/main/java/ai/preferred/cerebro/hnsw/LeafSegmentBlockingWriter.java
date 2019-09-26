@@ -275,8 +275,8 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
     @Override
     protected void mutuallyConnectNewElement(Node newNode,
-                                           RestrictedMaxHeap topCandidates,
-                                           int level) {
+                                             RestrictedMaxHeap topCandidates,
+                                             int level) {
 
         int bestN = level == 0 ? this.maxM0 : this.maxM;
 
@@ -285,8 +285,8 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
         Iterator<Candidate> iteratorSelected = getNeighborsByHeuristic2(topCandidates, null, bestN);
-        while (iteratorSelected.hasNext()){
-        //for (Candidate selected: selectedNeighbors) {
+
+        while (iteratorSelected.hasNext()) {
             int selectedNeighbourId = iteratorSelected.next().nodeId;
 
             synchronized (activeConstruction) {
@@ -294,6 +294,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                     continue;
                 }
             }
+
             outNewNodeConns.add(selectedNeighbourId);
 
             Node neighbourNode = nodes.get(selectedNeighbourId);
@@ -309,44 +310,101 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                 IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
 
                 if (outNeighbourConnsAtLevel.size() < bestN) {
+
                     if (removeEnabled) {
                         newNode.inConns[level].add(selectedNeighbourId);
                     }
+
                     outNeighbourConnsAtLevel.add(newNodeId);
                 } else {
                     // finding the "weakest" element to replace it with the new one
+
                     double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+
                     RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
                     candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
+
                     outNeighbourConnsAtLevel.forEach(id -> {
                         double dist = distanceFunction.distance(neighbourVector, nodes.get(id).vector());
                         candidates.add(new Candidate(id, dist, distanceComparator));
                     });
 
+                    MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
+
+                    Iterator<Candidate> selecteds = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+
                     if (removeEnabled) {
                         newNode.inConns[level].add(selectedNeighbourId);
                     }
 
-                    //I don't think we need more robustness at this point as the set is now reduced
-                    //to bestN + 1 already, and we need to pick out the top bestN. The difference of
-                    //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
-                    Candidate rejected = candidates.pop();
-
                     outNeighbourConnsAtLevel.clear();
-                    Iterator<Candidate> iterator = candidates.iterator();
-                    while (iterator.hasNext()){
-                        outNeighbourConnsAtLevel.add(iterator.next().nodeId);
+                    while (selecteds.hasNext()) {
+                        outNeighbourConnsAtLevel.add(selecteds.next().nodeId);
                     }
 
                     if (removeEnabled) {
-                        Node node = nodes.get(rejected.nodeId);
-                        node.inConns[level].remove(selectedNeighbourId);
+                        prunedConnections.forEach(id -> {
+                            Node node = nodes.get(id);
+                            synchronized (node.inConns) {
+                                node.inConns[level].remove(selectedNeighbourId);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    protected Iterator<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
+                                            MutableIntList prunedConnections,
+                                            int m) {
+
+        if (topCandidates.size() < m) {
+            topCandidates.iterator();
+        }
+
+        Stack<Candidate> queueClosest = new Stack<Candidate>(topCandidates.size());
+        List<Candidate> returnList = new ArrayList<>();
+
+        while (topCandidates.size() != 0) {
+            queueClosest.push(topCandidates.pop());
+        }
+
+        while (!queueClosest.isEmpty()) {
+            Candidate currentPair = queueClosest.pop();
+
+            boolean good;
+            if (returnList.size() >= m) {
+                good = false;
+            } else {
+                double distToQuery = currentPair.distance;
+
+                good = true;
+                for (Candidate secondPair : returnList) {
+
+                    double curdist = distanceFunction.distance(
+                            nodes.get(secondPair.nodeId).vector(),
+                            nodes.get(currentPair.nodeId).vector()
+                    );
+
+                    if (lesser(curdist, distToQuery)) {
+                        good = false;
+                        break;
                     }
 
                 }
             }
+            if (good) {
+                returnList.add(currentPair);
+            } else {
+                if (prunedConnections != null) {
+                    prunedConnections.add(currentPair.nodeId);
+                }
+            }
         }
 
+        return returnList.iterator();
     }
 
     @Override
@@ -356,8 +414,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         BitSet visitedBitSet = parent.getBitsetFromPool();
 
         try {
-            RestrictedMaxHeap topCandidates =
-                    new RestrictedMaxHeap(k, ()-> null);
+            RestrictedMaxHeap topCandidates = new RestrictedMaxHeap(k, ()-> null);
             PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
             double distance = distanceFunction.distance(destination, entryPointNode.vector());
@@ -372,13 +429,13 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
             while (!checkNeighborSet.isEmpty()) {
 
-                Candidate curCandidate = checkNeighborSet.poll();
+                Candidate nodeWithNeighbors = checkNeighborSet.poll();
 
-                if (greater(curCandidate.distance, lowerBound)) {
+                if (greater(nodeWithNeighbors.distance, lowerBound)) {
                     break;
                 }
 
-                Node node = nodes.get(curCandidate.nodeId);
+                Node node = nodes.get(nodeWithNeighbors.nodeId);
 
                 synchronized (node) {
 
@@ -398,7 +455,6 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                             if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
 
                                 Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
-
                                 checkNeighborSet.add(newCandidate);
                                 if (topCandidates.size() == k)
                                     topCandidates.updateTop(newCandidate);
@@ -419,6 +475,9 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
             parent.returnBitsetToPool(visitedBitSet);
         }
     }
+
+
+
     @Override
     protected void saveVecs(String dirPath)  {
         synchronized(nodes){
