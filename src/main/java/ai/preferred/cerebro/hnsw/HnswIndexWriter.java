@@ -20,7 +20,7 @@ public final class HnswIndexWriter extends ParentHnsw
 
     //Create Constructor
     public HnswIndexWriter(HnswConfiguration configuration, String dir) {
-        if (!isSafeToCreate()){
+        if (!isSafeToCreate(dir)){
             throw new IllegalArgumentException("An index has already resided in this directory. Can only modify.");
         }
         this.configuration = configuration;
@@ -60,7 +60,7 @@ public final class HnswIndexWriter extends ParentHnsw
         }
     }
 
-    private boolean isSafeToCreate(){
+    private boolean isSafeToCreate(String idxDir){
         File file = new File(idxDir + globalConfigFileName);
         return !IndexUtils.checkFileExist(file);
     }

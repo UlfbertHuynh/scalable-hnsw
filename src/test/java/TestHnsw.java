@@ -12,9 +12,9 @@ public class TestHnsw {
     @Test
     public void testCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_MULTI + "4M";
+        String indexDir = IndexConst.HNSW_PATH_MULTI + "1M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_4M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_1M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
