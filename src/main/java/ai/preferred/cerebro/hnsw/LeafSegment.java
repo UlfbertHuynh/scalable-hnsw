@@ -33,7 +33,7 @@ abstract class LeafSegment {
     protected final String LOCAL_INVERT;
     protected final String LOCAL_VECS;
     //local
-    protected String leafName;
+    final protected String leafName;
     protected int baseID;
 
     protected volatile int nodeCount;
