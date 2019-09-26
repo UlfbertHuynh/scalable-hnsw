@@ -42,9 +42,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_SINGLE + "4M";
+        String indexDir = IndexConst.HNSW_PATH_SINGLE + "2M_testing";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_4M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_2M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -54,10 +54,10 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        configuration.setM(20);
-        configuration.setEf(20);
-        configuration.setEfConstruction(400);
-        configuration.setMaxItemLeaf(4_000_000);
+        //configuration.setM(20);
+        //configuration.setEf(20);
+        //configuration.setEfConstruction(400);
+        configuration.setMaxItemLeaf(500_000);
         configuration.setLowMemoryMode(true);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 

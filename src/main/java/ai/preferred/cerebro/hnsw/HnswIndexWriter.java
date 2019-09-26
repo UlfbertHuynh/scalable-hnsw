@@ -212,14 +212,17 @@ public final class HnswIndexWriter extends ParentHnsw
 
             CountDownLatch latch = new CountDownLatch(numThreads);
             //final AtomicInteger idxleafInAction = new AtomicInteger(nleaves - 1);
+            LeafSegmentBlockingWriter leafInAction = (LeafSegmentBlockingWriter) leaves[nleaves - 1];
+            int idxleafInAction = nleaves - 1;
             for (int threadId = 0; threadId < numThreads; threadId++) {
 
                 executorService.submit(() -> {
-                    int idxleafInAction = nleaves - 1;
                     Item item;
+                    int idxleaf = idxleafInAction;
+                    LeafSegmentBlockingWriter leaf = leafInAction;
                     while(throwableHolder.get() == null && (item = queue.poll()) != null) {
                         try {
-                            boolean signal = ((LeafSegmentBlockingWriter)leaves[idxleafInAction]).add(item);
+                            boolean signal = ((LeafSegmentBlockingWriter)leaf).add(item);
                             if (signal){
                                 int done = workDone.incrementAndGet();
 
@@ -232,7 +235,7 @@ public final class HnswIndexWriter extends ParentHnsw
                             else {
                                 growLeaf(idxleafInAction, true);
                                 ++idxleafInAction;
-                                ((LeafSegmentBlockingWriter)leaves[idxleafInAction]).add(item);
+                                ((LeafSegmentBlockingWriter)leaf).add(item);
                             }
                         } catch (RuntimeException t) {
                             throwableHolder.set(t);
