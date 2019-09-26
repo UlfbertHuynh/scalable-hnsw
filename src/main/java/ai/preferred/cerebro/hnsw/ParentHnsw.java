@@ -5,6 +5,7 @@ import com.esotericsoftware.kryo.io.Input;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
@@ -64,6 +65,7 @@ abstract class ParentHnsw {
     public BitSet getBitsetFromPool(){
         return visitedBitSetPool.borrowObject();
     }
+
     public void returnBitsetToPool(BitSet bitSet){
         visitedBitSetPool.returnObject(bitSet);
     }
@@ -71,5 +73,9 @@ abstract class ParentHnsw {
         int leafNum = globalID / configuration.maxItemLeaf;
         int internalID = globalID % configuration.maxItemLeaf;
         return leaves[leafNum].getNode(internalID).get();
+    }
+
+    static public void printIndexInfo(String idxFolder){
+
     }
 }

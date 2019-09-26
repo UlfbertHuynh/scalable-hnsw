@@ -66,10 +66,18 @@ public final class HnswIndexWriter extends ParentHnsw
     }
 
 
-    private synchronized boolean addLeaf(int idxLeafInAction){
+    private synchronized boolean growLeaf(int idxLeafInAction, boolean isLeafBlocking){
         if (idxLeafInAction == nleaves - 1) {
             System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
-            leaves[nleaves] = new LeafSegmentBlockingWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            if (leaves.length == nleaves){
+                LeafSegment[] hold = leaves;
+                leaves = new LeafSegmentWriter[nleaves + 5];
+                System.arraycopy(hold, 0, leaves, 0, hold.length);
+            }
+            if (isLeafBlocking)
+                leaves[nleaves] = new LeafSegmentBlockingWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            else
+                leaves[nleaves] = new LeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
             return true;
         }
         else if(idxLeafInAction < nleaves - 1){
@@ -222,7 +230,7 @@ public final class HnswIndexWriter extends ParentHnsw
                             //here we assume that add(item) return false when
                             //the segment when reached its maximum capacity
                             else {
-                                addLeaf(idxleafInAction);
+                                growLeaf(idxleafInAction, true);
                                 ++idxleafInAction;
                                 ((LeafSegmentBlockingWriter)leaves[idxleafInAction]).add(item);
                             }
