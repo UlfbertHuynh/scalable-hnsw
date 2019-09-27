@@ -8,6 +8,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 public class TestHnsw {
+    @Test
+    public void testPrintInfo(){
+        String indexDir = IndexConst.HNSW_PATH_MULTI + "1M";
+        ParentHnsw.printIndexInfo(indexDir);
+    }
 
     @Test
     public void testCreateAndSave(){
