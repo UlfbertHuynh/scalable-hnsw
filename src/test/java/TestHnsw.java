@@ -12,9 +12,9 @@ public class TestHnsw {
     @Test
     public void testCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_MULTI + "1M";
+        String indexDir = IndexConst.HNSW_PATH_MULTI + "6M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_1M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -42,9 +42,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_SINGLE + "2M_testing";
+        String indexDir = IndexConst.HNSW_PATH_SINGLE + "6M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_2M.o");
+            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -54,10 +54,10 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        //configuration.setM(20);
-        //configuration.setEf(20);
-        //configuration.setEfConstruction(400);
-        configuration.setMaxItemLeaf(500_000);
+        configuration.setM(20);
+        configuration.setEf(20);
+        configuration.setEfConstruction(400);
+        configuration.setMaxItemLeaf(6_000_000);
         configuration.setLowMemoryMode(true);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
@@ -73,11 +73,11 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
-        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "4M");
+        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "6M");
+        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "6M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_4M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_6M.o");
         }
         catch (IOException e) {
             e.printStackTrace();
