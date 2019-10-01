@@ -249,8 +249,6 @@ public class LeafSegmentWriter extends LeafSegment {
                 });
 
                 MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
-                System.out.println(candidates.size());
-                System.out.println(bestN);
                 getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
 
                 if (removeEnabled) {
