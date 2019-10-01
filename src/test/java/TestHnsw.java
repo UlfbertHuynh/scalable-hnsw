@@ -8,14 +8,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 public class TestHnsw {
+    @Test
+    public void testPrintInfo(){
+        String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
+        ParentHnsw.printIndexInfo(indexDir);
+    }
 
     @Test
     public void testCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_MULTI + "6M";
-        try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
 
+        String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
+        try {
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_1M.o");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -42,9 +47,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = IndexConst.HNSW_PATH_SINGLE + "6M";
+        String indexDir = TestConst.HNSW_PATH_SINGLE + "2M_testing";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_2M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -73,11 +78,12 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "6M");
-        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "6M");
+
+        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
+        HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_MULTI + "4M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_6M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(TestConst.DIM_50_PATH + "query_top20_4M.o");
         }
         catch (IOException e) {
             e.printStackTrace();

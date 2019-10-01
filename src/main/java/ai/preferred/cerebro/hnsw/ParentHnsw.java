@@ -10,9 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
 
-abstract class ParentHnsw {
-    protected final String globalConfigFileName = Sp + "global_config.o";
-    protected final String globalLookupFileName = Sp + "global_lookup.o";
+abstract public class ParentHnsw {
+    protected static final String globalConfigFileName = Sp + "global_config.o";
+    protected static final String globalLookupFileName = Sp + "global_lookup.o";
 
     protected String idxDir;
     protected HnswConfiguration configuration;
@@ -76,6 +76,37 @@ abstract class ParentHnsw {
     }
 
     static public void printIndexInfo(String idxFolder){
+        Kryo kryo = new Kryo();
+        kryo.register(Integer.class);
+        kryo.register(ConcurrentHashMap.class);
+        //Load up configuration
+        Input input = null;
+        try {
+            input = new Input(new FileInputStream(idxFolder + globalConfigFileName));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        int nConnsInHighLayer = kryo.readObject(input, int.class);
+
+        kryo.readObject(input, int.class);
+        kryo.readObject(input, int.class);
+        boolean removeAllowed = kryo.readObject(input, boolean.class);
+        boolean addSegmentOneByOne = kryo.readObject(input, boolean.class);
+        int maxNodeCount = kryo.readObject(input, int.class);
+        int numleaves = kryo.readObject(input, int.class);
+        input.close();
+
+        System.out.println("Index Info:");
+        System.out.println("Number of outward connections per nodes in higher layer: " + nConnsInHighLayer);
+        System.out.println("Number of outward connections per nodes in base layer: " + nConnsInHighLayer * 2);
+        System.out.println("Node removal allowed: " + (removeAllowed ? "Yes" : "No"));
+        System.out.println("Node insert modes: " + (addSegmentOneByOne ? "fill up one segment at a time" : "many segments at a time"));
+        System.out.println("Maximum capacity of each leaf segment: " + maxNodeCount);
+        System.out.println("Number of leaf segment: " + numleaves);
+        System.out.println("Leaf segment info: ");
+        for (int i = 0; i < numleaves; i++) {
+            System.out.println(LeafSegment.capacityInfo(i, maxNodeCount, idxFolder));
+        }
 
     }
 }

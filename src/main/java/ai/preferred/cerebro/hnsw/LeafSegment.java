@@ -360,4 +360,37 @@ abstract class LeafSegment {
         input.close();
         return entryId;
     }
+
+    static public String capacityInfo(int numName, int maxNodeCount, String idxDir){
+        String leafname = numName + "_";
+        File configFile = new File(idxDir + Sp + leafname + "config.o");
+        File deletedIdFile = new File(idxDir + Sp + leafname + "deleted.o");
+
+        Kryo kryo = new Kryo();
+        Input input = null;
+        try {
+            input = new Input(new FileInputStream(configFile));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        kryo.readObject(input, int.class);
+        int nodeCount = kryo.readObject(input, int.class);
+        //Save the id of entry node
+        kryo.readObject(input, int.class);
+        input.close();
+
+        kryo.register(int[].class);
+        kryo.register(IntArrayList.class);
+        kryo.register(IntArrayStack.class);
+        IntArrayStack deletedIds = null;
+        try {
+            input = new Input(new FileInputStream(deletedIdFile));
+            deletedIds = kryo.readObject(input, IntArrayStack.class);
+            input.close();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return "\tSegment " + numName + ":\n\t\t" + "capacity: " + (nodeCount - deletedIds.size()) + "/" + maxNodeCount;
+    }
 }
