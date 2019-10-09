@@ -1,10 +1,10 @@
 package ai.preferred.cerebro.hnsw;
 
-public class Item {
+public class Item<TVector> {
     final int externalId;
-    final double[] vector;
+    final TVector vector;
 
-    public Item(int externalId, double[] vector) {
+    public Item(int externalId, TVector vector) {
         this.externalId = externalId;
         this.vector = vector;
     }

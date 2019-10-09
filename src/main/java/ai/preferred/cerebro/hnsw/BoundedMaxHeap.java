@@ -5,8 +5,8 @@ import org.apache.lucene.util.PriorityQueue;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 
-public class RestrictedMaxHeap extends PriorityQueue<Candidate> {
-    public RestrictedMaxHeap(int maxSize, Supplier<Candidate> sentinelObjectSupplier) {
+public class BoundedMaxHeap extends PriorityQueue<Candidate> {
+    public BoundedMaxHeap(int maxSize, Supplier<Candidate> sentinelObjectSupplier) {
         super(maxSize, sentinelObjectSupplier);
     }
 

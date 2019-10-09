@@ -12,8 +12,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-public final class HnswIndexWriter extends ParentHnsw
-        implements ConcurrentWriter{
+public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
+        implements ConcurrentWriter<TVector>{
 
     private final int OPTIMAL_NUM_LEAVES;
 
@@ -41,9 +41,9 @@ public final class HnswIndexWriter extends ParentHnsw
         int baseNewLeaf = 0;
         for (int i = 0; i < nleaves; i++) {
             if (configuration.lowMemoryMode)
-                leaves[i] = new LeafSegmentBlockingWriter(this, i, baseNewLeaf);
+                leaves[i] = new LeafSegmentBlockingWriter<>(this, i, baseNewLeaf);
             else
-                leaves[i] = new LeafSegmentWriter(this, i, baseNewLeaf);
+                leaves[i] = new LeafSegmentWriter<>(this, i, baseNewLeaf);
             baseNewLeaf += configuration.maxItemLeaf;
         }
 
@@ -56,7 +56,7 @@ public final class HnswIndexWriter extends ParentHnsw
         this.visitedBitSetPool = new GenericObjectPool<>(() -> new BitSet(configuration.maxItemLeaf), nleaves);
         //load all leaves
         for (int i = 0; i < nleaves; i++) {
-            leaves[i] = new LeafSegmentWriter(this, i, idxDir);
+            leaves[i] = new LeafSegmentWriter<>(this, i, idxDir);
         }
     }
 
@@ -70,14 +70,14 @@ public final class HnswIndexWriter extends ParentHnsw
         if (leafInAction.compareTo(leaves[nleaves - 1].leafName) == 0) {
             System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
             if (leaves.length == nleaves){
-                LeafSegment[] hold = leaves;
+                LeafSegment<TVector>[] hold = leaves;
                 leaves = new LeafSegmentWriter[nleaves + 5];
                 System.arraycopy(hold, 0, leaves, 0, hold.length);
             }
             if (isLeafBlocking)
-                leaves[nleaves] = new LeafSegmentBlockingWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+                leaves[nleaves] = new LeafSegmentBlockingWriter<>(this, nleaves,configuration.maxItemLeaf * nleaves++);
             else
-                leaves[nleaves] = new LeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+                leaves[nleaves] = new LeafSegmentWriter<>(this, nleaves,configuration.maxItemLeaf * nleaves++);
             return (LeafSegmentWriter) leaves[nleaves - 1];
         }
         else if(leafInAction.compareTo(leaves[nleaves - 1].leafName) < 0){
@@ -153,7 +153,7 @@ public final class HnswIndexWriter extends ParentHnsw
 
 
     @Override
-    public void addAll(Collection<Item> items) throws InterruptedException {
+    public void addAll(Collection<Item<TVector>> items) throws InterruptedException {
         String message = checkCapacity(items.size());
         if(message == null){
             if (configuration.lowMemoryMode)
@@ -167,7 +167,7 @@ public final class HnswIndexWriter extends ParentHnsw
     }
 
     @Override
-    public void addAll(Collection<Item> items, int numThreads, ProgressListener listener, int progressUpdateInterval) throws InterruptedException {
+    public void addAll(Collection<Item<TVector>> items, int numThreads, ProgressListener listener, int progressUpdateInterval) throws InterruptedException {
         AtomicReference<RuntimeException> throwableHolder = new AtomicReference<>();
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads, new NamedThreadFactory("indexer-%d"));
@@ -199,7 +199,7 @@ public final class HnswIndexWriter extends ParentHnsw
         }
     }
 
-    public void singleSegmentAddAll(Collection<Item> items, int numThreads, ProgressListener listener, int progressUpdateInterval) throws InterruptedException {
+    public void singleSegmentAddAll(Collection<Item<TVector>> items, int numThreads, ProgressListener listener, int progressUpdateInterval) throws InterruptedException {
         AtomicReference<RuntimeException> throwableHolder = new AtomicReference<>();
 
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads,
@@ -208,16 +208,16 @@ public final class HnswIndexWriter extends ParentHnsw
         AtomicInteger workDone = new AtomicInteger();
 
         try {
-            Queue<Item> queue = new LinkedBlockingDeque<>(items);
+            Queue<Item<TVector>> queue = new LinkedBlockingDeque<>(items);
 
             CountDownLatch latch = new CountDownLatch(numThreads);
             //final AtomicInteger idxleafInAction = new AtomicInteger(nleaves - 1);
-            LeafSegmentBlockingWriter leafInAction = (LeafSegmentBlockingWriter) leaves[nleaves - 1];
+            LeafSegmentBlockingWriter<TVector> leafInAction = (LeafSegmentBlockingWriter<TVector>) leaves[nleaves - 1];
             for (int threadId = 0; threadId < numThreads; threadId++) {
 
                 executorService.submit(() -> {
-                    LeafSegmentBlockingWriter leaf = leafInAction;
-                    Item item;
+                    LeafSegmentBlockingWriter<TVector> leaf = leafInAction;
+                    Item<TVector> item;
                     while(throwableHolder.get() == null && (item = queue.poll()) != null) {
                         try {
                             boolean signal = leaf.add(item);
@@ -231,7 +231,7 @@ public final class HnswIndexWriter extends ParentHnsw
                             //here we assume that add(item) return false when
                             //the segment when reached its maximum capacity
                             else {
-                                leaf = (LeafSegmentBlockingWriter) growNewLeaf(leaf.leafName, true);
+                                leaf = (LeafSegmentBlockingWriter<TVector>) growNewLeaf(leaf.leafName, true);
                                 leaf.add(item);
                             }
                         } catch (RuntimeException t) {

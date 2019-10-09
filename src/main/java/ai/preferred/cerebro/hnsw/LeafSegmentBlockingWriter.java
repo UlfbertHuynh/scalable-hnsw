@@ -20,12 +20,12 @@ import java.util.concurrent.locks.StampedLock;
 //Instead use HnswIndexWriter to spread your vectors out in many graphs, the number of graphs to spread out your nodes
 //should be the number of cores your CPU has. This will give you both good index building time, good search time and
 // nearly double the accuracy (tested with a 6-core CPU).
-public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
+public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVector> {
 
     private ReentrantLock globalLock;
     private StampedLock stampedLock;
     private BitSet activeConstruction;
-    private AtomicReferenceArray<Node> nodes;
+    private AtomicReferenceArray<Node<TVector>> nodes;
 
     //Create constructor
     public LeafSegmentBlockingWriter(HnswIndexWriter parent, int numName, int base) {
@@ -48,11 +48,11 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
         super.nodes = null;
     }
     @Override
-    public Optional<double[]> getVec(int internalID) {
+    public Optional<TVector> getVec(int internalID) {
         return Optional.ofNullable(nodes.get(internalID)).map(Node::vector);
     }
     @Override
-    public Optional<Node> getNode(int internalID) {
+    public Optional<Node<TVector>> getNode(int internalID) {
         return Optional.ofNullable(nodes.get(internalID));
     }
 
@@ -113,7 +113,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
      * @return true means item added successfully,
      */
     @Override
-    public boolean add(Item item) {
+    public boolean add(Item<TVector> item) {
         globalLock.lock();
         try {
             Integer globalId = lookup.get(item.externalId);
@@ -128,7 +128,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                 //if there is already this id in the index, it means this is an update
                 //so only handle if this is the leaf that the id was already residing
                 if(globalId >= baseID && globalId < baseID + maxNodeCount){
-                    Node node = nodes.get(globalId - baseID);
+                    Node<TVector> node = nodes.get(globalId - baseID);
                     if (Objects.deepEquals(node.vector(), item.vector)) {
                         //object already added
                         return true;
@@ -172,7 +172,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                 }
             }
 
-            Node entryPointCopy = entryPoint;
+            Node<TVector> entryPointCopy = entryPoint;
 
             if (entryPoint != null && randomLevel <= entryPoint.maxLevel()) {
                 globalLock.unlock();
@@ -194,11 +194,11 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                     activeConstruction.flipTrue(internalId);
                 }
 
-                Node newNode = new Node(internalId, outConns, inConns, item);
+                Node<TVector> newNode = new Node<>(internalId, outConns, inConns, item);
                 nodes.set(internalId, newNode);
                 lookup.put(item.externalId, internalId + baseID);
 
-                Node curNode = entryPointCopy;
+                Node<TVector> curNode = entryPointCopy;
 
                 //entry point is null if this is the first node inserted into the graph
                 if (curNode != null) {
@@ -222,12 +222,12 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
                                         int candidateId = candidateConns.get(i);
 
-                                        Node candidateNode = nodes.get(candidateId);
+                                        Node<TVector> candidateNode = nodes.get(candidateId);
 
                                         double candidateDistance = distanceFunction.distance(newNode.vector(), candidateNode.vector());
 
                                         //updating the starting node to be used at lower level
-                                        if (lesser(candidateDistance, curDist)) {
+                                        if (candidateDistance < curDist) {
                                             curDist = candidateDistance;
                                             curNode = candidateNode;
                                             changed = true;
@@ -239,7 +239,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                     }
                     //insert the new node starting from its highest layer by setting up connections
                     for (int level = Math.min(randomLevel, entryPointCopy.maxLevel()); level >= 0; level--) {
-                        RestrictedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
+                        BoundedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
                         synchronized (newNode) {
                             mutuallyConnectNewElement(newNode, topCandidates, level);
                         }
@@ -274,14 +274,14 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
     }
 
     @Override
-    protected void mutuallyConnectNewElement(Node newNode,
-                                             RestrictedMaxHeap topCandidates,
+    protected void mutuallyConnectNewElement(Node<TVector> newNode,
+                                             BoundedMaxHeap topCandidates,
                                              int level) {
 
         int bestN = level == 0 ? this.maxM0 : this.maxM;
 
         int newNodeId = newNode.internalId;
-        double[] newNodeVector = newNode.vector();
+        TVector newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
         Iterator<Candidate> iteratorSelected = getNeighborsByHeuristic2(topCandidates, null, bestN);
@@ -297,7 +297,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
             outNewNodeConns.add(selectedNeighbourId);
 
-            Node neighbourNode = nodes.get(selectedNeighbourId);
+            Node<TVector> neighbourNode = nodes.get(selectedNeighbourId);
 
             synchronized (neighbourNode) {
 
@@ -305,7 +305,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                     neighbourNode.inConns[level].add(newNodeId);
                 }
 
-                double[] neighbourVector = neighbourNode.vector();
+                TVector neighbourVector = neighbourNode.vector();
 
                 IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
 
@@ -321,7 +321,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
                     double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
 
-                    RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                    BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                     candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
 
                     outNeighbourConnsAtLevel.forEach(id -> {
@@ -356,9 +356,9 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
     }
 
     @Override
-    protected Iterator<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
-                                            MutableIntList prunedConnections,
-                                            int m) {
+    protected Iterator<Candidate> getNeighborsByHeuristic2(BoundedMaxHeap topCandidates,
+                                                           MutableIntList prunedConnections,
+                                                           int m) {
 
         if (topCandidates.size() < m) {
             topCandidates.iterator();
@@ -388,7 +388,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                             nodes.get(currentPair.nodeId).vector()
                     );
 
-                    if (lesser(curdist, distToQuery)) {
+                    if (curdist < distToQuery) {
                         good = false;
                         break;
                     }
@@ -408,13 +408,13 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
     }
 
     @Override
-    protected RestrictedMaxHeap searchLayer(
-            Node entryPointNode, double[] destination, int k, int layer) {
+    protected BoundedMaxHeap searchLayer(
+            Node<TVector> entryPointNode, TVector destination, int k, int layer) {
 
         BitSet visitedBitSet = parent.getBitsetFromPool();
 
         try {
-            RestrictedMaxHeap topCandidates = new RestrictedMaxHeap(k, ()-> null);
+            BoundedMaxHeap topCandidates = new BoundedMaxHeap(k, ()-> null);
             PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
             double distance = distanceFunction.distance(destination, entryPointNode.vector());
@@ -431,7 +431,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
 
                 Candidate nodeWithNeighbors = checkNeighborSet.poll();
 
-                if (greater(nodeWithNeighbors.distance, lowerBound)) {
+                if (nodeWithNeighbors.distance > lowerBound) {
                     break;
                 }
 
@@ -452,7 +452,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
                             double candidateDistance = distanceFunction.distance(destination,
                                     nodes.get(candidateId).vector());
 
-                            if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
+                            if (topCandidates.top().distance > candidateDistance || topCandidates.size() < k) {
 
                                 Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
                                 checkNeighborSet.add(newCandidate);
@@ -481,7 +481,7 @@ public class LeafSegmentBlockingWriter extends LeafSegmentWriter {
     @Override
     protected void saveVecs(String dirPath)  {
         synchronized(nodes){
-            double[][] vecs = new  double[nodeCount][];
+            TVector[] vecs = (TVector[]) new  Object[nodeCount][];
             Node t;
             for (int i = 0; i < nodeCount; i++) {
                 t = this.nodes.get(i);

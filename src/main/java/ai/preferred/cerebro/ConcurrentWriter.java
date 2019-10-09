@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @see <a href="https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm">k-nearest neighbors algorithm</a>
  */
-public interface ConcurrentWriter extends Serializable {
+public interface ConcurrentWriter<TVector> extends Serializable {
 
     /**
      * By default after indexing this many items progress will be reported to registered progress listeners.
@@ -48,7 +48,7 @@ public interface ConcurrentWriter extends Serializable {
      * @param items the items to add to the index
      * @throws InterruptedException thrown when the thread doing the indexing is interrupted
      */
-    default void addAll(Collection<Item> items) throws InterruptedException {
+    default void addAll(Collection<Item<TVector>> items) throws InterruptedException {
         addAll(items, CLIProgressListener.INSTANCE);
     }
 
@@ -60,7 +60,7 @@ public interface ConcurrentWriter extends Serializable {
      * @param listener listener to report progress to
      * @throws InterruptedException thrown when the thread doing the indexing is interrupted
      */
-    default void addAll(Collection<Item> items, ProgressListener listener) throws InterruptedException {
+    default void addAll(Collection<Item<TVector>> items, ProgressListener listener) throws InterruptedException {
         addAll(items, Runtime.getRuntime().availableProcessors(), listener, DEFAULT_PROGRESS_UPDATE_INTERVAL);
     }
 
@@ -74,7 +74,7 @@ public interface ConcurrentWriter extends Serializable {
      * @param progressUpdateInterval after indexing this many items progress will be reported
      * @throws InterruptedException thrown when the thread doing the indexing is interrupted
      */
-    default void addAll(Collection<Item> items, int numThreads, ProgressListener listener, int progressUpdateInterval)
+    default void addAll(Collection<Item<TVector>> items, int numThreads, ProgressListener listener, int progressUpdateInterval)
             throws InterruptedException {
 
         AtomicReference<RuntimeException> throwableHolder = new AtomicReference<>();

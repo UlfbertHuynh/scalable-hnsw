@@ -8,7 +8,7 @@ import java.io.Serializable;
  //* @param <T> Type of distance between items (expect any numeric type: float, double, int, ..)
  */
 @FunctionalInterface
-public interface DistanceFunction extends Serializable {
+public interface DistanceFunction<TVector> extends Serializable {
 
     /**
      * Gets the distance between 2 items.
@@ -17,6 +17,6 @@ public interface DistanceFunction extends Serializable {
      * @param v to item
      * @return The distance between items.
      */
-    double distance(double[] u, double[] v);
+    double distance(TVector u, TVector v);
 
 }

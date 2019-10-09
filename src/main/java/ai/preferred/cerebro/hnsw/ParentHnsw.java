@@ -6,11 +6,12 @@ import com.esotericsoftware.kryo.io.Input;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
 
-abstract public class ParentHnsw {
+abstract public class ParentHnsw<TVector> {
     protected static final String globalConfigFileName = Sp + "global_config.o";
     protected static final String globalLookupFileName = Sp + "global_lookup.o";
 
@@ -19,7 +20,7 @@ abstract public class ParentHnsw {
     protected int nleaves;
     protected ConcurrentHashMap<Integer, Integer> lookup;
     protected GenericObjectPool<BitSet> visitedBitSetPool;
-    protected LeafSegment[] leaves;
+    protected LeafSegment<TVector>[] leaves;
 
     ParentHnsw(){
     }

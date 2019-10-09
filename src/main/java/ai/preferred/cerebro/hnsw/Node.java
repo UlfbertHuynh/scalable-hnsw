@@ -2,14 +2,14 @@ package ai.preferred.cerebro.hnsw;
 
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
-public class Node {
+public class Node<TVector> {
     final int internalId;
 
     final IntArrayList[] outConns;
 
     final IntArrayList[] inConns;
 
-    final Item item;
+    final Item<TVector> item;
 
 
     Node(int id, IntArrayList[] outgoingConnections, IntArrayList[] incomingConnections, Item item) {
@@ -28,7 +28,7 @@ public class Node {
         return item.externalId;
     }
 
-    double[] vector(){
+    TVector vector(){
         return item.vector;
     }
 

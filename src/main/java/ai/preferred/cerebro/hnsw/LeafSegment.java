@@ -24,7 +24,7 @@ import static ai.preferred.cerebro.IndexConst.Sp;
  * @see <a href="https://arxiv.org/abs/1603.09320">
  * Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs</a>
  */
-abstract class LeafSegment {
+abstract class LeafSegment<TVector> {
     //constants
     protected final String LOCAL_CONFIG;
     protected final String LOCAL_DELETED;
@@ -38,12 +38,12 @@ abstract class LeafSegment {
 
     protected volatile int nodeCount;
     protected IntArrayStack freedIds;
-    protected volatile Node entryPoint;
-    protected Node[] nodes;
+    protected volatile Node<TVector> entryPoint;
+    protected Node<TVector>[] nodes;
 
 
     //global - same across all leaves
-    protected DistanceFunction distanceFunction;
+    protected DistanceFunction<TVector> distanceFunction;
     protected Comparator<Double> distanceComparator;
     protected int m;
     protected int maxM;//number of connections allowed each node in higher layers
@@ -55,7 +55,7 @@ abstract class LeafSegment {
     protected int maxNodeCount;
 
     final protected ParentHnsw parent;
-    //<Lucene id, internal id>
+    //<external id, internal id>
     protected ConcurrentHashMap<Integer, Integer> lookup;
 
     //runtime specific
@@ -70,7 +70,7 @@ abstract class LeafSegment {
         HnswConfiguration configuration = parent.getConfiguration();
         this.maxNodeCount = configuration.maxItemLeaf;
         this.distanceFunction = configuration.distanceFunction;
-        this.distanceComparator = configuration.distanceComparator;
+        //this.distanceComparator = configuration.distanceComparator;
         this.m = configuration.m;
         this.maxM = configuration.m;
         this.maxM0 = configuration.m * 2;
@@ -127,17 +127,19 @@ abstract class LeafSegment {
         }
     }
 
-    public Optional<double[]> getVec(int internalID) {
+    public Optional<TVector> getVec(int internalID) {
         return Optional.ofNullable(nodes[internalID]).map(Node::vector);
     }
 
-    public Optional<Node> getNode(int internalID) {
+    public Optional<Node<TVector>> getNode(int internalID) {
         return Optional.ofNullable(nodes[internalID]);
     }
 
     public int getNodeCount() {
         return nodeCount;
     }
+
+    /*
 
     protected boolean lesser(double x, double y) {
         return distanceComparator.compare(x, y) < 0;
@@ -147,12 +149,14 @@ abstract class LeafSegment {
         return distanceComparator.compare(x, y) > 0;
     }
 
-    protected RestrictedMaxHeap searchLayer(Node entryPointNode, double[] destination, int k, int layer){
+     */
+
+    protected BoundedMaxHeap searchLayer(Node<TVector> entryPointNode, TVector destination, int k, int layer){
         BitSet visitedBitSet = parent.getBitsetFromPool();
         try {
             //a priority queue which can not grow past the initial capacity
-            RestrictedMaxHeap topCandidates =
-                    new RestrictedMaxHeap(k, ()-> null);
+            BoundedMaxHeap topCandidates =
+                    new BoundedMaxHeap(k, ()-> null);
 
             PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
@@ -169,7 +173,7 @@ abstract class LeafSegment {
             while (!checkNeighborSet.isEmpty()) {
                 Candidate nodeWithNeighbors = checkNeighborSet.poll();
 
-                if (greater(nodeWithNeighbors.distance, lowerBound)) {
+                if (nodeWithNeighbors.distance > lowerBound) {
                     break;
                 }
 
@@ -186,7 +190,7 @@ abstract class LeafSegment {
                         double candidateDistance = distanceFunction.distance(destination,
                                 nodes[candidateId].vector());
 
-                        if (greater(topCandidates.top().distance, candidateDistance) || topCandidates.size() < k) {
+                        if (topCandidates.top().distance > candidateDistance || topCandidates.size() < k) {
 
                             Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
 
@@ -239,7 +243,7 @@ abstract class LeafSegment {
 
 
         int entryID = loadConfig(configFile);
-        double[][] vecs = loadVecs(vecsFile);
+        TVector[] vecs = loadVecs(vecsFile);
         IntArrayList[][] outConns = loadConns(outConnectionFile);
         IntArrayList[][] inConns = null;
 
@@ -260,10 +264,10 @@ abstract class LeafSegment {
             if(removeEnabled && mode == Mode.MODIFY)
                 inconn = inConns[i];
             if(vecs[i] != null){
-                this.nodes[i] = new Node(i,
+                this.nodes[i] = new Node<>(i,
                                 outConns[i],
                                 inconn,
-                                new Item(invertLookUp[i], vecs[i]));
+                                new Item<>(invertLookUp[i], vecs[i]));
             }
         }
         this.entryPoint = nodes[entryID];
@@ -286,21 +290,18 @@ abstract class LeafSegment {
         return lookup;
     }
 
-    private double[][] loadVecs(File vecsFile) {
-        double[][] vecs = null;
+    private TVector[] loadVecs(File vecsFile) {
+        Object vecs = null;
         Kryo kryo = new Kryo();
-        kryo.register(double[].class);
-        kryo.register(double[][].class);
         try {
             Input input = new Input(new FileInputStream(vecsFile));
-            vecs = kryo.readObject(input, double[][].class);
+            vecs = kryo.readClassAndObject(input);
             input.close();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        assert nodeCount == vecs.length;
-        return vecs;
+        return (TVector[]) vecs;
     }
 
     private IntArrayList[][] loadConns(File connFile) {

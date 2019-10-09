@@ -2,26 +2,23 @@ package ai.preferred.cerebro.hnsw;
 
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
-import java.util.*;
-
-public class LeafSegmentSearcher extends LeafSegment {
+public class LeafSegmentSearcher<TVector> extends LeafSegment<TVector> {
 
     LeafSegmentSearcher(ParentHnsw parent, int numName, String idxDir) {
         super(parent, numName, idxDir, Mode.SEARCH);
     }
 
-    public TopDocs findNearest(double[] query, int k) {
+    public TopDocs findNearest(TVector query, int k) {
 
         if (entryPoint == null) {
             return new TopDocs(0, null, Float.NaN);
         }
 
-        Node entryPointCopy = entryPoint;
+        Node<TVector> entryPointCopy = entryPoint;
 
-        Node currObj = entryPointCopy;
+        Node<TVector> currObj = entryPointCopy;
 
         double curDist = distanceFunction.distance(query, currObj.vector());
 
@@ -37,7 +34,7 @@ public class LeafSegmentSearcher extends LeafSegment {
                     int candidateId = candidateConnections.get(i);
 
                     double candidateDistance = distanceFunction.distance(query, nodes[candidateId].vector());
-                    if (lesser(candidateDistance, curDist)) {
+                    if (candidateDistance < curDist) {
                         curDist = candidateDistance;
                         currObj = nodes[candidateId];
                         changed = true;
@@ -46,7 +43,7 @@ public class LeafSegmentSearcher extends LeafSegment {
             }
         }
 
-        RestrictedMaxHeap topCandidates = searchLayer(currObj, query, Math.max(ef, k), 0);
+        BoundedMaxHeap topCandidates = searchLayer(currObj, query, Math.max(ef, k), 0);
 
         while (topCandidates.size() > k) {
             topCandidates.pop();
