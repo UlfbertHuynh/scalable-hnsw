@@ -18,9 +18,9 @@ public class TestHnsw {
     public void testCreateAndSave(){
         double[][] vecs = null;
 
-        String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
+        String indexDir = TestConst.HNSW_PATH_MULTI + "10M";
         try {
-            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_1M.o");
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_10M.o");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -29,9 +29,9 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        configuration.setM(20);
-        configuration.setEf(20);
-        configuration.setEfConstruction(400);
+        configuration.setM(50);
+        configuration.setEf(50);
+        configuration.setEfConstruction(500);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
         try {
@@ -47,9 +47,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = TestConst.HNSW_PATH_SINGLE + "2M_testing";
+        String indexDir = TestConst.HNSW_PATH_SINGLE + "6M";
         try {
-            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_2M.o");
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_6M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -59,10 +59,10 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        configuration.setM(20);
-        configuration.setEf(20);
-        configuration.setEfConstruction(400);
         configuration.setMaxItemLeaf(6_000_000);
+        configuration.setM(50);
+        configuration.setEf(50);
+        configuration.setEfConstruction(500);
         configuration.setLowMemoryMode(true);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
@@ -79,11 +79,11 @@ public class TestHnsw {
     @Test
     public void testLoadAndSearch(){
 
-        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_SINGLE + "4M");
-        HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_MULTI + "4M");
+        //HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_SINGLE + "6M");
+        HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_MULTI + "10M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(TestConst.DIM_50_PATH + "query_top20_4M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(TestConst.DIM_50_PATH + "query_top20_10M.o");
         }
         catch (IOException e) {
             e.printStackTrace();
