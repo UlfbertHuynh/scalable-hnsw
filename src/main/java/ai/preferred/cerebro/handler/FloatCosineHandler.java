@@ -1,6 +1,6 @@
 package ai.preferred.cerebro.handler;
 
-public class CosineFloatHandler extends VecFloatHandler {
+public class FloatCosineHandler extends VecFloatHandler {
     @Override
     public double distance(float[] a, float[] b) {
         float dot = 0.0f;

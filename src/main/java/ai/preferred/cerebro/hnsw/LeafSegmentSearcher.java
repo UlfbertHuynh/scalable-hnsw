@@ -20,7 +20,7 @@ public class LeafSegmentSearcher<TVector> extends LeafSegment<TVector> {
 
         Node<TVector> currObj = entryPointCopy;
 
-        double curDist = distanceFunction.distance(query, currObj.vector());
+        double curDist = handler.distance(query, currObj.vector());
 
         for (int activeLevel = entryPointCopy.maxLevel(); activeLevel > 0; activeLevel--) {
 
@@ -33,7 +33,7 @@ public class LeafSegmentSearcher<TVector> extends LeafSegment<TVector> {
 
                     int candidateId = candidateConnections.get(i);
 
-                    double candidateDistance = distanceFunction.distance(query, nodes[candidateId].vector());
+                    double candidateDistance = handler.distance(query, nodes[candidateId].vector());
                     if (candidateDistance < curDist) {
                         curDist = candidateDistance;
                         currObj = nodes[candidateId];

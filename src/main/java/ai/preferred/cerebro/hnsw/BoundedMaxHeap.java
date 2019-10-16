@@ -5,6 +5,9 @@ import org.apache.lucene.util.PriorityQueue;
 import java.util.ArrayList;
 import java.util.function.Supplier;
 
+/**
+ * Class extending lucene's binary heap (minheap) implementation {@link PriorityQueue}
+ */
 public class BoundedMaxHeap extends PriorityQueue<Candidate> {
     public BoundedMaxHeap(int maxSize, Supplier<Candidate> sentinelObjectSupplier) {
         super(maxSize, sentinelObjectSupplier);

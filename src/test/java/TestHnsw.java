@@ -1,4 +1,5 @@
 import ai.preferred.cerebro.*;
+import ai.preferred.cerebro.handler.DoubleCosineHandler;
 import ai.preferred.cerebro.hnsw.*;
 import org.apache.lucene.search.TopDocs;
 import org.junit.Test;
@@ -24,15 +25,15 @@ public class TestHnsw {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        List<Item> vecList = new ArrayList<>(vecs.length);
+        List<Item<double[]>> vecList = new ArrayList<>(vecs.length);
         for (int i = 0; i < vecs.length; i++) {
-            vecList.add(new Item(i, vecs[i]));
+            vecList.add(new Item<>(i, vecs[i]));
         }
-        HnswConfiguration configuration= new HnswConfiguration();
+        HnswConfiguration configuration= new HnswConfiguration(new DoubleCosineHandler());
         configuration.setM(20);
         configuration.setEf(20);
         configuration.setEfConstruction(400);
-        HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
+        HnswIndexWriter<double[]> index = new HnswIndexWriter<>(configuration, indexDir);
 
         try {
             index.addAll(vecList);
@@ -54,11 +55,11 @@ public class TestHnsw {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        List<Item> vecList = new ArrayList<>(vecs.length);
+        List<Item<double[]>> vecList = new ArrayList<>(vecs.length);
         for (int i = 0; i < vecs.length; i++) {
-            vecList.add(new Item(i, vecs[i]));
+            vecList.add(new Item<>(i, vecs[i]));
         }
-        HnswConfiguration configuration= new HnswConfiguration();
+        HnswConfiguration configuration= new HnswConfiguration(new DoubleCosineHandler());
         //configuration.setM(20);
         //configuration.setEf(20);
         //configuration.setEfConstruction(400);

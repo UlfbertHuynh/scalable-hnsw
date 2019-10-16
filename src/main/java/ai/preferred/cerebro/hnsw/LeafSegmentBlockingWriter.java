@@ -206,7 +206,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
                     //if no layer added
                     if (newNode.maxLevel() < entryPointCopy.maxLevel()) {
 
-                        double curDist = distanceFunction.distance(newNode.vector(), curNode.vector());
+                        double curDist = handler.distance(newNode.vector(), curNode.vector());
                         //sequentially zoom in until reach the layer next to
                         // the highest layer that the new node has to be inserted
                         for (int curLevel = entryPointCopy.maxLevel(); curLevel > newNode.maxLevel(); curLevel--) {
@@ -224,7 +224,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
 
                                         Node<TVector> candidateNode = nodes.get(candidateId);
 
-                                        double candidateDistance = distanceFunction.distance(newNode.vector(), candidateNode.vector());
+                                        double candidateDistance = handler.distance(newNode.vector(), candidateNode.vector());
 
                                         //updating the starting node to be used at lower level
                                         if (candidateDistance < curDist) {
@@ -319,13 +319,13 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
                 } else {
                     // finding the "weakest" element to replace it with the new one
 
-                    double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                    double dMax = handler.distance(newNodeVector, neighbourNode.vector());
 
                     BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                     candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
 
                     outNeighbourConnsAtLevel.forEach(id -> {
-                        double dist = distanceFunction.distance(neighbourVector, nodes.get(id).vector());
+                        double dist = handler.distance(neighbourVector, nodes.get(id).vector());
                         candidates.add(new Candidate(id, dist, distanceComparator));
                     });
 
@@ -383,7 +383,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
                 good = true;
                 for (Candidate secondPair : returnList) {
 
-                    double curdist = distanceFunction.distance(
+                    double curdist = handler.distance(
                             nodes.get(secondPair.nodeId).vector(),
                             nodes.get(currentPair.nodeId).vector()
                     );
@@ -417,7 +417,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
             BoundedMaxHeap topCandidates = new BoundedMaxHeap(k, ()-> null);
             PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
-            double distance = distanceFunction.distance(destination, entryPointNode.vector());
+            double distance = handler.distance(destination, entryPointNode.vector());
 
             Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
 
@@ -449,7 +449,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
 
                             visitedBitSet.flipTrue(candidateId);
 
-                            double candidateDistance = distanceFunction.distance(destination,
+                            double candidateDistance = handler.distance(destination,
                                     nodes.get(candidateId).vector());
 
                             if (topCandidates.top().distance > candidateDistance || topCandidates.size() < k) {

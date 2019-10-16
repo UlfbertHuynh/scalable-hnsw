@@ -148,7 +148,7 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
             //if no layer added
             if (newNode.maxLevel() < entryPoint.maxLevel()) {
 
-                double curDist = distanceFunction.distance(newNode.vector(), curNode.vector());
+                double curDist = handler.distance(newNode.vector(), curNode.vector());
                 //sequentially zoom in until reach the layer next to
                 // the highest layer that the new node has to be inserted
                 for (int curLevel = entryPoint.maxLevel(); curLevel > newNode.maxLevel(); curLevel--) {
@@ -163,7 +163,7 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
 
                             Node<TVector> candidateNode = nodes[candidateId];
 
-                            double candidateDistance = distanceFunction.distance(newNode.vector(), candidateNode.vector());
+                            double candidateDistance = handler.distance(newNode.vector(), candidateNode.vector());
 
                             //updating the starting node to be used at lower level
                             if (candidateDistance < curDist) {
@@ -238,11 +238,11 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
             // then pick out the top limited number allowed, the
             // new conn may be left out or not.
             else {
-                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                double dMax = handler.distance(newNodeVector, neighbourNode.vector());
                 BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
                 outNeighbourConnsAtLevel.forEach(id -> {
-                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    double dist = handler.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
@@ -270,11 +270,11 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
                 /* In case every breaks or accuracy plummets, uncomment this section
                 and delete everything above up till the start of the else clause
 
-                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                double dMax = handler.distance(newNodeVector, neighbourNode.vector());
                 BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
                 outNeighbourConnsAtLevel.forEach(id -> {
-                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    double dist = handler.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
@@ -334,7 +334,7 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
                 good = true;
                 for (Candidate chosen : returnList) {
 
-                    double curdist = distanceFunction.distance(
+                    double curdist = handler.distance(
                             nodes[chosen.nodeId].vector(),
                             nodes[candidate.nodeId].vector()
                     );
@@ -452,14 +452,7 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
                     vecs[i] = this.nodes[i].vector();
                 else vecs[i] = null;
             }
-            Kryo kryo = new Kryo();
-            try {
-                Output outputVec = new Output(new FileOutputStream(dirPath + LOCAL_VECS));
-                kryo.writeClassAndObject(outputVec, vecs);
-                outputVec.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
+            handler.save(dirPath + LOCAL_VECS, vecs);
         }
     }
 

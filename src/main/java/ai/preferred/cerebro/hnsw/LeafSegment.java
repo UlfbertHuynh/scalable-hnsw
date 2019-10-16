@@ -2,9 +2,9 @@ package ai.preferred.cerebro.hnsw;
 
 
 import ai.preferred.cerebro.ConcurrentWriter;
-import ai.preferred.cerebro.DistanceFunction;
 
 import ai.preferred.cerebro.IndexUtils;
+import ai.preferred.cerebro.handler.VecHandler;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
@@ -43,7 +43,7 @@ abstract class LeafSegment<TVector> {
 
 
     //global - same across all leaves
-    protected DistanceFunction<TVector> distanceFunction;
+    protected VecHandler<TVector> handler;
     protected Comparator<Double> distanceComparator;
     protected int m;
     protected int maxM;//number of connections allowed each node in higher layers
@@ -69,7 +69,7 @@ abstract class LeafSegment<TVector> {
                         int numName){
         HnswConfiguration configuration = parent.getConfiguration();
         this.maxNodeCount = configuration.maxItemLeaf;
-        this.distanceFunction = configuration.distanceFunction;
+        this.handler = configuration.handler;
         //this.distanceComparator = configuration.distanceComparator;
         this.m = configuration.m;
         this.maxM = configuration.m;
@@ -160,7 +160,7 @@ abstract class LeafSegment<TVector> {
 
             PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
 
-            double distance = distanceFunction.distance(destination, entryPointNode.vector());
+            double distance = handler.distance(destination, entryPointNode.vector());
 
             Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
 
@@ -187,7 +187,7 @@ abstract class LeafSegment<TVector> {
 
                         visitedBitSet.flipTrue(candidateId);
 
-                        double candidateDistance = distanceFunction.distance(destination,
+                        double candidateDistance = handler.distance(destination,
                                 nodes[candidateId].vector());
 
                         if (topCandidates.top().distance > candidateDistance || topCandidates.size() < k) {
@@ -243,7 +243,7 @@ abstract class LeafSegment<TVector> {
 
 
         int entryID = loadConfig(configFile);
-        TVector[] vecs = loadVecs(vecsFile);
+        TVector[] vecs = handler.load(vecsFile);
         IntArrayList[][] outConns = loadConns(outConnectionFile);
         IntArrayList[][] inConns = null;
 
@@ -288,20 +288,6 @@ abstract class LeafSegment<TVector> {
         }
         assert nodeCount == lookup.length;
         return lookup;
-    }
-
-    private TVector[] loadVecs(File vecsFile) {
-        Object vecs = null;
-        Kryo kryo = new Kryo();
-        try {
-            Input input = new Input(new FileInputStream(vecsFile));
-            vecs = kryo.readClassAndObject(input);
-            input.close();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return (TVector[]) vecs;
     }
 
     private IntArrayList[][] loadConns(File connFile) {
