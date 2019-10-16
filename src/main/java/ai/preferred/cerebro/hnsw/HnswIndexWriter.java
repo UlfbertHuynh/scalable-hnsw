@@ -260,8 +260,10 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
     public void save() throws IOException {
         synchronized (configuration){
             Kryo kryo = new Kryo();
+            kryo.register(String.class);
             try {
                 Output output = new Output(new FileOutputStream(idxDir + globalConfigFileName));
+                kryo.writeObject(output, configuration.handler.getClass().getCanonicalName());
                 kryo.writeObject(output, configuration.m);
                 kryo.writeObject(output, configuration.ef);
                 kryo.writeObject(output, configuration.efConstruction);
