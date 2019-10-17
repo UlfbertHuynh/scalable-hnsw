@@ -70,7 +70,7 @@ abstract class LeafSegment<TVector> {
         HnswConfiguration configuration = parent.getConfiguration();
         this.maxNodeCount = configuration.maxItemLeaf;
         this.handler = configuration.handler;
-        //this.distanceComparator = configuration.distanceComparator;
+        this.distanceComparator = configuration.distanceComparator;
         this.m = configuration.m;
         this.maxM = configuration.m;
         this.maxM0 = configuration.m * 2;

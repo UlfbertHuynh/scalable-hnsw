@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Utils {
-    @Test
+
     public void convert_to_float() throws FileNotFoundException {
         String [] dataSizes = {"1M", "2M", "4M", "6M", "10M"};
         String sampleFile = "itemVec_";

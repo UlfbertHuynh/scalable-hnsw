@@ -481,25 +481,7 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
     @Override
     protected void saveVecs(String dirPath)  {
         synchronized(nodes){
-            TVector[] vecs = (TVector[]) new  Object[nodeCount][];
-            Node t;
-            for (int i = 0; i < nodeCount; i++) {
-                t = this.nodes.get(i);
-                if (t != null)
-                    vecs[i] = this.nodes.get(i).vector();
-                else vecs[i] = null;
-            }
-            Kryo kryo = new Kryo();
-            kryo.register(double[].class);
-            kryo.register(double[][].class);
-
-            try {
-                Output outputVec = new Output(new FileOutputStream(dirPath + LOCAL_VECS));
-                kryo.writeObject(outputVec, vecs);
-                outputVec.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
+            handler.saveNodesBlocking(dirPath + LOCAL_VECS, this.nodes, nodeCount);
         }
     }
     @Override

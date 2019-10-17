@@ -28,7 +28,7 @@ public class Node<TVector> {
         return item.externalId;
     }
 
-    TVector vector(){
+    public TVector vector(){
         return item.vector;
     }
 

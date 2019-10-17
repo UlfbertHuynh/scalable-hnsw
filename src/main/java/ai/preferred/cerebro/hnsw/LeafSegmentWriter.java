@@ -444,15 +444,7 @@ public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
 
     protected void saveVecs(String dirPath)  {
         synchronized(nodes){
-            TVector[] vecs = (TVector[]) new Objects[nodeCount];
-            Node t;
-            for (int i = 0; i < nodeCount; i++) {
-                t= this.nodes[i];
-                if (t != null)
-                    vecs[i] = this.nodes[i].vector();
-                else vecs[i] = null;
-            }
-            handler.save(dirPath + LOCAL_VECS, vecs);
+            handler.saveNodes(dirPath + LOCAL_VECS, this.nodes, nodeCount);
         }
     }
 
