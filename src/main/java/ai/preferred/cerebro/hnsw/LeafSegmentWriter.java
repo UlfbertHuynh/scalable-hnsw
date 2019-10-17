@@ -10,7 +10,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
 
-public class LeafSegmentWriter extends LeafSegment {
+public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
 
     //Creation Constructor
     protected LeafSegmentWriter(HnswIndexWriter parent, int numName , int baseID) {
@@ -79,7 +79,7 @@ public class LeafSegmentWriter extends LeafSegment {
         return true;
     }
 
-    public boolean add(Item item) {
+    public boolean add(Item<TVector> item) {
         //System.out.println(item.externalId);
         //globalID is internalID + baseID of the segment
         Integer globalId = lookup.get(item.externalId);
@@ -136,11 +136,11 @@ public class LeafSegmentWriter extends LeafSegment {
             }
         }
 
-        Node newNode = new Node(internalId, outConns, inConns, item);
+        Node<TVector> newNode = new Node<>(internalId, outConns, inConns, item);
         nodes[internalId] = newNode;
         lookup.put(item.externalId, internalId + baseID);
 
-        Node curNode = entryPoint;
+        Node<TVector> curNode = entryPoint;
 
         //entry point is null if this is the first node inserted into the graph
         if (curNode != null) {
@@ -148,7 +148,7 @@ public class LeafSegmentWriter extends LeafSegment {
             //if no layer added
             if (newNode.maxLevel() < entryPoint.maxLevel()) {
 
-                double curDist = distanceFunction.distance(newNode.vector(), curNode.vector());
+                double curDist = handler.distance(newNode.vector(), curNode.vector());
                 //sequentially zoom in until reach the layer next to
                 // the highest layer that the new node has to be inserted
                 for (int curLevel = entryPoint.maxLevel(); curLevel > newNode.maxLevel(); curLevel--) {
@@ -161,12 +161,12 @@ public class LeafSegmentWriter extends LeafSegment {
 
                             int candidateId = candidateConns.get(i);
 
-                            Node candidateNode = nodes[candidateId];
+                            Node<TVector> candidateNode = nodes[candidateId];
 
-                            double candidateDistance = distanceFunction.distance(newNode.vector(), candidateNode.vector());
+                            double candidateDistance = handler.distance(newNode.vector(), candidateNode.vector());
 
                             //updating the starting node to be used at lower level
-                            if (lesser(candidateDistance, curDist)) {
+                            if (candidateDistance < curDist) {
                                 curDist = candidateDistance;
                                 curNode = candidateNode;
                                 changed = true;
@@ -180,7 +180,7 @@ public class LeafSegmentWriter extends LeafSegment {
                 //topCandidates hold efConstruction number of nodes closest to the new node in this layer
                 //at the top of the heap is the node farthest away from the new node compared to the rest
                 //of the heap
-                RestrictedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
+                BoundedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
                 mutuallyConnectNewElement(newNode, topCandidates, level);
 
             }
@@ -197,14 +197,14 @@ public class LeafSegmentWriter extends LeafSegment {
     }
 
 
-    protected void mutuallyConnectNewElement(Node newNode,
-                                           RestrictedMaxHeap topCandidates,
+    protected void mutuallyConnectNewElement(Node<TVector> newNode,
+                                           BoundedMaxHeap topCandidates,
                                            int level) {
 
         int bestN = level == 0 ? this.maxM0 : this.maxM;
 
         int newNodeId = newNode.internalId;
-        double[] newNodeVector = newNode.vector();
+        TVector newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
         //the idea of getNeighborsByHeuristic2() is to introduce a bit of change in which nodes
@@ -216,13 +216,13 @@ public class LeafSegmentWriter extends LeafSegment {
             int selectedNeighbourId = iteratorSelected.next().nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
-            Node neighbourNode = nodes[selectedNeighbourId];
+            Node<TVector> neighbourNode = nodes[selectedNeighbourId];
 
             if (removeEnabled) {
                 neighbourNode.inConns[level].add(newNodeId);
             }
 
-            double[] neighbourVector = neighbourNode.vector();
+            TVector neighbourVector = neighbourNode.vector();
 
             IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
             //if neighbor also has lower than limit number of connections than just add
@@ -238,11 +238,11 @@ public class LeafSegmentWriter extends LeafSegment {
             // then pick out the top limited number allowed, the
             // new conn may be left out or not.
             else {
-                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                double dMax = handler.distance(newNodeVector, neighbourNode.vector());
+                BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
                 outNeighbourConnsAtLevel.forEach(id -> {
-                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    double dist = handler.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
@@ -270,11 +270,11 @@ public class LeafSegmentWriter extends LeafSegment {
                 /* In case every breaks or accuracy plummets, uncomment this section
                 and delete everything above up till the start of the else clause
 
-                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                double dMax = handler.distance(newNodeVector, neighbourNode.vector());
+                BoundedMaxHeap candidates = new BoundedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
                 outNeighbourConnsAtLevel.forEach(id -> {
-                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    double dist = handler.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
@@ -304,9 +304,9 @@ public class LeafSegmentWriter extends LeafSegment {
     //Originally the function return void, we get the selected neighbors in updated
     //topCandidates, this is wasteful as we don't need the data returned to be in the
     //format of a MaxHeap, simply an array will do.
-    protected Iterator<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
-                                                       MutableIntList prunedConnections,
-                                                       int m) {
+    protected Iterator<Candidate> getNeighborsByHeuristic2(BoundedMaxHeap topCandidates,
+                                                           MutableIntList prunedConnections,
+                                                           int m) {
         if (topCandidates.size() <= m) {
             return topCandidates.iterator();
         }
@@ -334,12 +334,12 @@ public class LeafSegmentWriter extends LeafSegment {
                 good = true;
                 for (Candidate chosen : returnList) {
 
-                    double curdist = distanceFunction.distance(
+                    double curdist = handler.distance(
                             nodes[chosen.nodeId].vector(),
                             nodes[candidate.nodeId].vector()
                     );
 
-                    if (lesser(curdist, distToQuery)) {
+                    if (curdist < distToQuery) {
                         good = false;
                         break;
                     }
@@ -444,25 +444,7 @@ public class LeafSegmentWriter extends LeafSegment {
 
     protected void saveVecs(String dirPath)  {
         synchronized(nodes){
-            double[][] vecs = new  double[nodeCount][];
-            Node t;
-            for (int i = 0; i < nodeCount; i++) {
-                t= this.nodes[i];
-                if (t != null)
-                    vecs[i] = this.nodes[i].vector();
-                else vecs[i] = null;
-            }
-            Kryo kryo = new Kryo();
-            kryo.register(double[].class);
-            kryo.register(double[][].class);
-
-            try {
-                Output outputVec = new Output(new FileOutputStream(dirPath + LOCAL_VECS));
-                kryo.writeObject(outputVec, vecs);
-                outputVec.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
+            handler.saveNodes(dirPath + LOCAL_VECS, this.nodes, nodeCount);
         }
     }
 

@@ -6,7 +6,7 @@ import org.apache.lucene.util.ThreadInterruptedException;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class HnswIndexSearcher extends ParentHnsw {
+public class HnswIndexSearcher<TVector> extends ParentHnsw<TVector> {
     ExecutorService executor;
     public HnswIndexSearcher(String idxDir){
         super(idxDir);
@@ -15,7 +15,7 @@ public class HnswIndexSearcher extends ParentHnsw {
         leaves = new LeafSegmentSearcher[nleaves];
         //load all leaves
         for (int i = 0; i < nleaves; i++) {
-            leaves[i] = new LeafSegmentSearcher(this, i, idxDir);
+            leaves[i] = new LeafSegmentSearcher<>(this, i, idxDir);
             if (leaves[i].getNodeCount() > maxNodeCount)
                 maxNodeCount = leaves[i].getNodeCount();
         }
@@ -23,13 +23,13 @@ public class HnswIndexSearcher extends ParentHnsw {
         this.visitedBitSetPool = new GenericObjectPool<>(() -> new BitSet(finalMaxNodeCount), nleaves);
     }
 
-    public TopDocs search(double[] query, int k){
+    public TopDocs search(TVector query, int k){
         final int limit = Math.max(1, configuration.maxItemLeaf);
         final int cappedNumHits = Math.min(k, limit);
 
         final List<Future<TopDocs>> topDocsFutures = new ArrayList<>(nleaves);
         for (int i = 0; i < nleaves; ++i) {
-            LeafSegmentSearcher leaf = (LeafSegmentSearcher) leaves[i];
+            LeafSegmentSearcher<TVector> leaf = (LeafSegmentSearcher<TVector>) leaves[i];
             topDocsFutures.add(executor.submit(new Callable<TopDocs>() {
                 @Override
                 public TopDocs call() throws Exception {

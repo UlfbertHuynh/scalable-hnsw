@@ -1,16 +1,21 @@
 package ai.preferred.cerebro.hnsw;
 
+import ai.preferred.cerebro.handler.DoubleCosineHandler;
+import ai.preferred.cerebro.handler.VecHandler;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static ai.preferred.cerebro.IndexConst.Sp;
 
-abstract public class ParentHnsw {
+abstract public class ParentHnsw<TVector> {
     protected static final String globalConfigFileName = Sp + "global_config.o";
     protected static final String globalLookupFileName = Sp + "global_lookup.o";
 
@@ -19,7 +24,7 @@ abstract public class ParentHnsw {
     protected int nleaves;
     protected ConcurrentHashMap<Integer, Integer> lookup;
     protected GenericObjectPool<BitSet> visitedBitSetPool;
-    protected LeafSegment[] leaves;
+    protected LeafSegment<TVector>[] leaves;
 
     ParentHnsw(){
     }
@@ -30,6 +35,7 @@ abstract public class ParentHnsw {
         Kryo kryo = new Kryo();
         kryo.register(Integer.class);
         kryo.register(ConcurrentHashMap.class);
+        kryo.register(String.class);
         //Load up configuration
         Input input = null;
         try {
@@ -37,7 +43,25 @@ abstract public class ParentHnsw {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-        configuration = new HnswConfiguration();
+        String className = kryo.readObject(input, String.class);
+        VecHandler handler = null;
+        try {
+            Class<?> clazz = Class.forName(className);
+            Constructor<?> constructor = clazz.getConstructor();
+            handler = (VecHandler) constructor.newInstance(new Object[] {});
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        configuration = new HnswConfiguration(handler);
         configuration.setM(kryo.readObject(input, int.class));
         configuration.setEf(kryo.readObject(input, int.class));
         configuration.setEfConstruction(kryo.readObject(input, int.class));

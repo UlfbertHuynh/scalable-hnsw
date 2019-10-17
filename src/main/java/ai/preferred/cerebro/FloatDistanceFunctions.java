@@ -19,7 +19,7 @@ public final class FloatDistanceFunctions {
      * @return Cosine distance between u and v.
      */
     @SuppressWarnings("Duplicates")
-    public static float cosineDistance(float[] u, float[] v)  {
+    public static double cosineDistance(float[] u, float[] v)  {
         float dot = 0.0f;
         float nru = 0.0f;
         float nrv = 0.0f;
@@ -41,7 +41,7 @@ public final class FloatDistanceFunctions {
      * @return Cosine distance between u and v.
      */
     @SuppressWarnings("Duplicates")
-    public static float innerProduct(float[] u, float[] v) {
+    public static double innerProduct(float[] u, float[] v) {
         float dot = 0;
         for (int i = 0; i < u.length; i++) {
             dot += u[i] * v[i];

@@ -1,7 +1,7 @@
 package ai.preferred.cerebro.hnsw;
 
-import ai.preferred.cerebro.DistanceFunction;
 import ai.preferred.cerebro.DoubleDistanceFunctions;
+import ai.preferred.cerebro.handler.VecHandler;
 
 import java.util.Comparator;
 
@@ -14,10 +14,9 @@ public class HnswConfiguration {
     private static final boolean DEFAULT_REMOVE_ENABLED = true;
     private static final int DEFAULT_MAX_ITEM = 2_000_000;
     private static final boolean DEFAULT_MEMORY_MODE = false;
-    private static final DistanceFunction DEFAULT_DIST_FUNC = DoubleDistanceFunctions::cosineDistance;
     private static final boolean DEFAULT_HEURISTIC_MODE = true;
 
-    DistanceFunction distanceFunction;
+    VecHandler handler;
     Comparator distanceComparator;
 
     public void setMaxItemLeaf(int maxItemLeaf) {
@@ -41,15 +40,14 @@ public class HnswConfiguration {
     boolean useHeuristic = DEFAULT_HEURISTIC_MODE;
     boolean lowMemoryMode = DEFAULT_MEMORY_MODE;
 
-    public HnswConfiguration() {
-        this.distanceFunction = DEFAULT_DIST_FUNC;
+    public HnswConfiguration(VecHandler handler) {
+        this.handler = handler;
         this.distanceComparator = Comparator.naturalOrder();
         this.maxItemLeaf = DEFAULT_MAX_ITEM;
     }
 
-    public HnswConfiguration(DistanceFunction distanceFunction,
-                int maxItemCount) {
-        this.distanceFunction = distanceFunction;
+    public HnswConfiguration(VecHandler handler, int maxItemCount) {
+        this.handler = handler;
         this.distanceComparator = Comparator.naturalOrder();
         this.maxItemLeaf = maxItemCount;
     }
