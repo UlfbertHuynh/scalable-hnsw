@@ -15,7 +15,7 @@ public class HnswConfiguration {
     private static final int DEFAULT_MAX_ITEM = 2_000_000;
     private static final boolean DEFAULT_MEMORY_MODE = false;
     private static final DistanceFunction DEFAULT_DIST_FUNC = DoubleDistanceFunctions::cosineDistance;
-
+    private static final boolean DEFAULT_HEURISTIC_MODE = true;
 
     DistanceFunction distanceFunction;
     Comparator distanceComparator;
@@ -38,7 +38,7 @@ public class HnswConfiguration {
     // amount of nodes each leaf > 5M
 
 
-
+    boolean useHeuristic = DEFAULT_HEURISTIC_MODE;
     boolean lowMemoryMode = DEFAULT_MEMORY_MODE;
 
     public HnswConfiguration() {
@@ -98,7 +98,6 @@ public class HnswConfiguration {
     /**
      * Call to enable support for the experimental remove operation. Indices that support removes will consume more
      * memory.
-     *
      */
     public void setEnableRemove(boolean removeEnabled) {
         this.removeEnabled = removeEnabled;
@@ -108,6 +107,7 @@ public class HnswConfiguration {
     public boolean isLowMemoryMode() {
         return lowMemoryMode;
     }
+
 
     public void setLowMemoryMode(boolean lowMemoryMode) {
         this.lowMemoryMode = lowMemoryMode;

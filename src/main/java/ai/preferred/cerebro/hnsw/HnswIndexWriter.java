@@ -20,7 +20,7 @@ public final class HnswIndexWriter extends ParentHnsw
 
     //Create Constructor
     public HnswIndexWriter(HnswConfiguration configuration, String dir) {
-        if (!isSafeToCreate()){
+        if (!isSafeToCreate(dir)){
             throw new IllegalArgumentException("An index has already resided in this directory. Can only modify.");
         }
         this.configuration = configuration;
@@ -41,7 +41,7 @@ public final class HnswIndexWriter extends ParentHnsw
         int baseNewLeaf = 0;
         for (int i = 0; i < nleaves; i++) {
             if (configuration.lowMemoryMode)
-                leaves[i] = new BlockingLeafSegmentWriter(this, i, baseNewLeaf);
+                leaves[i] = new LeafSegmentBlockingWriter(this, i, baseNewLeaf);
             else
                 leaves[i] = new LeafSegmentWriter(this, i, baseNewLeaf);
             baseNewLeaf += configuration.maxItemLeaf;
@@ -60,20 +60,28 @@ public final class HnswIndexWriter extends ParentHnsw
         }
     }
 
-    private boolean isSafeToCreate(){
+    private boolean isSafeToCreate(String idxDir){
         File file = new File(idxDir + globalConfigFileName);
         return !IndexUtils.checkFileExist(file);
     }
 
 
-    private synchronized boolean addLeaf(int idxLeafInAction){
-        if (idxLeafInAction == nleaves - 1) {
+    private synchronized LeafSegmentWriter growNewLeaf(String leafInAction, boolean isLeafBlocking){
+        if (leafInAction.compareTo(leaves[nleaves - 1].leafName) == 0) {
             System.out.println("Current segment reached maximum capacity, creating and switching to use a new segment.");
-            leaves[nleaves] = new BlockingLeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
-            return true;
+            if (leaves.length == nleaves){
+                LeafSegment[] hold = leaves;
+                leaves = new LeafSegmentWriter[nleaves + 5];
+                System.arraycopy(hold, 0, leaves, 0, hold.length);
+            }
+            if (isLeafBlocking)
+                leaves[nleaves] = new LeafSegmentBlockingWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            else
+                leaves[nleaves] = new LeafSegmentWriter(this, nleaves,configuration.maxItemLeaf * nleaves++);
+            return (LeafSegmentWriter) leaves[nleaves - 1];
         }
-        else if(idxLeafInAction < nleaves - 1){
-            return false;
+        else if(leafInAction.compareTo(leaves[nleaves - 1].leafName) < 0){
+            return (LeafSegmentWriter) leaves[nleaves - 1];
         }
         else
             throw new IllegalArgumentException("In-action leaf's index should not be greater than the number of leaves minus one");
@@ -169,11 +177,12 @@ public final class HnswIndexWriter extends ParentHnsw
         try{
             Queue<Item> queue = new LinkedBlockingDeque<>(items);
             CountDownLatch latch = new CountDownLatch(numThreads);
-
+            int maxsize = items.size();
             for (int threadId = 0; threadId < numThreads; threadId++)
                 executorService.submit(
                         new InsertItemTask((LeafSegmentWriter)leaves[threadId],
                                 queue,
+                                maxsize,
                                 throwableHolder,
                                 workDone,
                                 latch,
@@ -203,14 +212,15 @@ public final class HnswIndexWriter extends ParentHnsw
 
             CountDownLatch latch = new CountDownLatch(numThreads);
             //final AtomicInteger idxleafInAction = new AtomicInteger(nleaves - 1);
+            LeafSegmentBlockingWriter leafInAction = (LeafSegmentBlockingWriter) leaves[nleaves - 1];
             for (int threadId = 0; threadId < numThreads; threadId++) {
 
                 executorService.submit(() -> {
-                    int idxleafInAction = nleaves - 1;
+                    LeafSegmentBlockingWriter leaf = leafInAction;
                     Item item;
                     while(throwableHolder.get() == null && (item = queue.poll()) != null) {
                         try {
-                            boolean signal = ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
+                            boolean signal = leaf.add(item);
                             if (signal){
                                 int done = workDone.incrementAndGet();
 
@@ -221,9 +231,8 @@ public final class HnswIndexWriter extends ParentHnsw
                             //here we assume that add(item) return false when
                             //the segment when reached its maximum capacity
                             else {
-                                addLeaf(idxleafInAction);
-                                ++idxleafInAction;
-                                ((BlockingLeafSegmentWriter)leaves[idxleafInAction]).add(item);
+                                leaf = (LeafSegmentBlockingWriter) growNewLeaf(leaf.leafName, true);
+                                leaf.add(item);
                             }
                         } catch (RuntimeException t) {
                             throwableHolder.set(t);
@@ -293,6 +302,7 @@ public final class HnswIndexWriter extends ParentHnsw
         final private int max;
         InsertItemTask(LeafSegmentWriter leaf,
                        Queue<Item> itemQueue,
+                       int maxsize,
                        AtomicReference<RuntimeException> throwableHolder,
                        AtomicInteger workDone,
                        CountDownLatch latch,
@@ -303,7 +313,7 @@ public final class HnswIndexWriter extends ParentHnsw
             this.workDone = workDone;
             this.latch = latch;
             this.listener = listener;
-            max = itemQueue.size();
+            max = maxsize;
         }
         @Override
         public void run() {

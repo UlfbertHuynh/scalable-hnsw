@@ -80,7 +80,8 @@ public class LeafSegmentWriter extends LeafSegment {
     }
 
     public boolean add(Item item) {
-        // globalID is internalID + baseID of the segment
+        //System.out.println(item.externalId);
+        //globalID is internalID + baseID of the segment
         Integer globalId = lookup.get(item.externalId);
 
         //check if there is nodes with similar id in the graph
@@ -176,7 +177,10 @@ public class LeafSegmentWriter extends LeafSegment {
             }
             //insert the new node starting from its highest layer by setting up connections
             for (int level = Math.min(randomLevel, entryPoint.maxLevel()); level >= 0; level--) {
-                PriorityQueue<Candidate> topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
+                //topCandidates hold efConstruction number of nodes closest to the new node in this layer
+                //at the top of the heap is the node farthest away from the new node compared to the rest
+                //of the heap
+                RestrictedMaxHeap topCandidates = searchLayer(curNode, newNode.vector(), efConstruction, level);
                 mutuallyConnectNewElement(newNode, topCandidates, level);
 
             }
@@ -188,12 +192,13 @@ public class LeafSegmentWriter extends LeafSegment {
             // this is thread safe because we get the global lock when we add a level
             this.entryPoint = newNode;
         }
+
         return true;
     }
 
 
     protected void mutuallyConnectNewElement(Node newNode,
-                                           PriorityQueue<Candidate> topCandidates,
+                                           RestrictedMaxHeap topCandidates,
                                            int level) {
 
         int bestN = level == 0 ? this.maxM0 : this.maxM;
@@ -202,14 +207,15 @@ public class LeafSegmentWriter extends LeafSegment {
         double[] newNodeVector = newNode.vector();
         IntArrayList outNewNodeConns = newNode.outConns[level];
 
-        getNeighborsByHeuristic2(topCandidates, null, bestN);
-
-        while (!topCandidates.isEmpty()) {
-            int selectedNeighbourId = topCandidates.poll().nodeId;
-
+        //the idea of getNeighborsByHeuristic2() is to introduce a bit of change in which nodes
+        //get to connect with our new nodes - not necessary the closest ones. As the authors say
+        // in their paper "to make the graph more robust"
+        Iterator<Candidate> iteratorSelected = getNeighborsByHeuristic2(topCandidates, null, bestN);
+        while(iteratorSelected.hasNext()){
+        //for (Candidate selected : selectedNeighbors) {
+            int selectedNeighbourId = iteratorSelected.next().nodeId;
 
             outNewNodeConns.add(selectedNeighbourId);
-
             Node neighbourNode = nodes[selectedNeighbourId];
 
             if (removeEnabled) {
@@ -219,15 +225,12 @@ public class LeafSegmentWriter extends LeafSegment {
             double[] neighbourVector = neighbourNode.vector();
 
             IntArrayList outNeighbourConnsAtLevel = neighbourNode.outConns[level];
-
             //if neighbor also has lower than limit number of connections than just add
             //new connections, no update needed.
             if (outNeighbourConnsAtLevel.size() < bestN) {
-
                 if (removeEnabled) {
                     newNode.inConns[level].add(selectedNeighbourId);
                 }
-
                 outNeighbourConnsAtLevel.add(newNodeId);
             }
             // if update is needed:
@@ -236,29 +239,56 @@ public class LeafSegmentWriter extends LeafSegment {
             // new conn may be left out or not.
             else {
                 double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
-
-                Comparator<Candidate> comparator = Comparator
-                        .<Candidate>naturalOrder().reversed();
-
-                PriorityQueue<Candidate> candidates = new PriorityQueue<>(comparator);
+                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
                 candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
+                outNeighbourConnsAtLevel.forEach(id -> {
+                    double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
+                    candidates.add(new Candidate(id, dist, distanceComparator));
+                });
 
+                if (removeEnabled) {
+                    newNode.inConns[level].add(selectedNeighbourId);
+                }
+
+                //I don't think we need more robustness at this point as the set is now reduced
+                //to bestN + 1 already, and we need to pick out the top bestN. The difference of
+                //one candidate doesn't justify calling the costly getNeighborsByHeuristic2() !
+                Candidate rejected = candidates.pop();
+
+                outNeighbourConnsAtLevel.clear();
+                Iterator<Candidate> iterator = candidates.iterator();
+                while (iterator.hasNext()){
+                    outNeighbourConnsAtLevel.add(iterator.next().nodeId);
+                }
+
+                if (removeEnabled) {
+                    Node node = nodes[rejected.nodeId];
+                    node.inConns[level].remove(selectedNeighbourId);
+                }
+
+
+                /* In case every breaks or accuracy plummets, uncomment this section
+                and delete everything above up till the start of the else clause
+
+                double dMax = distanceFunction.distance(newNodeVector, neighbourNode.vector());
+                RestrictedMaxHeap candidates = new RestrictedMaxHeap(bestN + 1, ()-> null);
+                candidates.add(new Candidate(newNodeId, dMax, distanceComparator));
                 outNeighbourConnsAtLevel.forEach(id -> {
                     double dist = distanceFunction.distance(neighbourVector, nodes[id].vector());
                     candidates.add(new Candidate(id, dist, distanceComparator));
                 });
 
                 MutableIntList prunedConnections = removeEnabled ? new IntArrayList() : null;
-                getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
+
+                List<Candidate> selectedConns = getNeighborsByHeuristic2(candidates, prunedConnections, bestN);
 
                 if (removeEnabled) {
                     newNode.inConns[level].add(selectedNeighbourId);
                 }
 
-
                 outNeighbourConnsAtLevel.clear();
-                while (!candidates.isEmpty()) {
-                    outNeighbourConnsAtLevel.add(candidates.poll().nodeId);
+                for (Candidate candidate: selectedConns) {
+                    outNeighbourConnsAtLevel.add(candidate.nodeId);
                 }
 
                 if (removeEnabled) {
@@ -266,40 +296,47 @@ public class LeafSegmentWriter extends LeafSegment {
                         Node node = nodes[id];
                         node.inConns[level].remove(selectedNeighbourId);
                     });
-                }
+                }*/
             }
         }
     }
 
-    protected void getNeighborsByHeuristic2(PriorityQueue<Candidate> topCandidates,
-                                            MutableIntList prunedConnections,
-                                            int m) {
-        if (topCandidates.size() < m) {
-            return;
+    //Originally the function return void, we get the selected neighbors in updated
+    //topCandidates, this is wasteful as we don't need the data returned to be in the
+    //format of a MaxHeap, simply an array will do.
+    protected Iterator<Candidate> getNeighborsByHeuristic2(RestrictedMaxHeap topCandidates,
+                                                       MutableIntList prunedConnections,
+                                                       int m) {
+        if (topCandidates.size() <= m) {
+            return topCandidates.iterator();
         }
 
-        PriorityQueue<Candidate> queueClosest = new PriorityQueue<>();
-        List<Candidate> returnList = new ArrayList<>();
+        Stack<Candidate> stackClosest = new Stack<>(topCandidates.size());
+        List<Candidate> returnList = new ArrayList<>(m);
 
-        while (!topCandidates.isEmpty()) {
-            queueClosest.add(topCandidates.poll());
+        //empty the entire MaxHeap by calling pop() will return the elements in descending order.
+        //The original algorithm use a MinHeap to pop out the element in ascending order with each
+        //call taking O(log(size)). The same can be achieved if we use a stack but even better as
+        //stack has constant time.
+        while (topCandidates.size() != 0) {
+            stackClosest.push(topCandidates.pop());
         }
 
-        while (!queueClosest.isEmpty()) {
-            Candidate currentPair = queueClosest.poll();
+        while (!stackClosest.isEmpty()) {
+            Candidate candidate = stackClosest.pop();
 
             boolean good;
             if (returnList.size() >= m) {
                 good = false;
             } else {
-                double distToQuery = currentPair.distance;
+                double distToQuery = candidate.distance;
 
                 good = true;
-                for (Candidate secondPair : returnList) {
+                for (Candidate chosen : returnList) {
 
                     double curdist = distanceFunction.distance(
-                            nodes[secondPair.nodeId].vector(),
-                            nodes[currentPair.nodeId].vector()
+                            nodes[chosen.nodeId].vector(),
+                            nodes[candidate.nodeId].vector()
                     );
 
                     if (lesser(curdist, distToQuery)) {
@@ -310,79 +347,14 @@ public class LeafSegmentWriter extends LeafSegment {
                 }
             }
             if (good) {
-                returnList.add(currentPair);
+                returnList.add(candidate);
             } else {
                 if (prunedConnections != null) {
-                    prunedConnections.add(currentPair.nodeId);
+                    prunedConnections.add(candidate.nodeId);
                 }
             }
         }
-        topCandidates.addAll(returnList);
-    }
-
-
-
-    @Override
-    PriorityQueue<Candidate> searchLayer(Node entryPointNode, double[] destination, int k, int layer) {
-        BitSet visitedBitSet = parent.getBitsetFromPool();
-        try {
-            PriorityQueue<Candidate> topCandidates =
-                    new PriorityQueue<>(Comparator.<Candidate>naturalOrder().reversed());
-            PriorityQueue<Candidate> checkNeighborSet = new PriorityQueue<>();
-
-            double distance = distanceFunction.distance(destination, entryPointNode.vector());
-
-            Candidate firstCandidade = new Candidate(entryPointNode.internalId, distance, distanceComparator);
-
-            topCandidates.add(firstCandidade);
-            checkNeighborSet.add(firstCandidade);
-            visitedBitSet.flipTrue(entryPointNode.internalId);
-
-            double lowerBound = distance;
-
-            while (!checkNeighborSet.isEmpty()) {
-
-                Candidate nodeWithNeighbors = checkNeighborSet.poll();
-
-                if (greater(nodeWithNeighbors.distance, lowerBound)) {
-                    break;
-                }
-
-                MutableIntList candidates = nodes[nodeWithNeighbors.nodeId].outConns[layer];
-
-                for (int i = 0; i < candidates.size(); i++) {
-
-                    int candidateId = candidates.get(i);
-
-                    if (!visitedBitSet.isTrue(candidateId)) {
-
-                        visitedBitSet.flipTrue(candidateId);
-
-                        double candidateDistance = distanceFunction.distance(destination,
-                                nodes[candidateId].vector());
-
-                        if (greater(topCandidates.peek().distance, candidateDistance) || topCandidates.size() < k) {
-
-                            Candidate newCandidate = new Candidate(candidateId, candidateDistance, distanceComparator);
-
-                            checkNeighborSet.add(newCandidate);
-                            topCandidates.add(newCandidate);
-
-                            if (topCandidates.size() > k) {
-                                topCandidates.poll();
-                            }
-
-                            lowerBound = topCandidates.peek().distance;
-                        }
-                    }
-                }
-            }
-
-            return topCandidates;
-        } finally {
-            visitedBitSet.clear();
-            parent.returnBitsetToPool(visitedBitSet);
-        }
+        return returnList.iterator();
     }
 
     public void save(String dir){

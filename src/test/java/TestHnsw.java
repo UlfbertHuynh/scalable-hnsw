@@ -8,14 +8,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
 public class TestHnsw {
+    @Test
+    public void testPrintInfo(){
+        String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
+        ParentHnsw.printIndexInfo(indexDir);
+    }
 
     @Test
     public void testCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = "E:\\index\\20_conns\\hnsw_multi_segment\\6M";//IndexConst.HNSW_PATH_MULTI + "1M";
-        try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
 
+        String indexDir = TestConst.HNSW_PATH_MULTI + "10M";
+        try {
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_10M.o");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -24,9 +29,9 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
-        configuration.setM(20);
-        configuration.setEf(20);
-        configuration.setEfConstruction(400);
+        configuration.setM(50);
+        configuration.setEf(50);
+        configuration.setEfConstruction(500);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
         try {
@@ -42,9 +47,9 @@ public class TestHnsw {
     @Test
     public void testSynchedCreateAndSave(){
         double[][] vecs = null;
-        String indexDir = "E:\\index\\20_conns\\hnsw_single_segment\\6M";//IndexConst.HNSW_PATH_SINGLE + "1M";
+        String indexDir = TestConst.HNSW_PATH_SINGLE + "6M";
         try {
-            vecs = IndexUtils.readVectors(IndexConst.DIM_50_PATH + "itemVec_6M.o");
+            vecs = IndexUtils.readVectors(TestConst.DIM_50_PATH + "itemVec_6M.o");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -58,6 +63,9 @@ public class TestHnsw {
         configuration.setEf(20);
         configuration.setEfConstruction(400);
         configuration.setMaxItemLeaf(6_000_000);
+        configuration.setM(50);
+        configuration.setEf(50);
+        configuration.setEfConstruction(500);
         configuration.setLowMemoryMode(true);
         HnswIndexWriter index = new HnswIndexWriter(configuration, indexDir);
 
@@ -73,11 +81,12 @@ public class TestHnsw {
 
     @Test
     public void testLoadAndSearch(){
-        HnswIndexSearcher index = new HnswIndexSearcher(/*IndexConst.HNSW_PATH_SINGLE + "1M"*/"E:\\index\\20_conns\\hnsw_single_segment\\6M");
-        //HnswIndexSearcher index = new HnswIndexSearcher(IndexConst.HNSW_PATH_MULTI + "1M");
+
+        //HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_SINGLE + "6M");
+        HnswIndexSearcher index = new HnswIndexSearcher(TestConst.HNSW_PATH_MULTI + "10M");
         HashMap<double[], ArrayList<Integer>> queryAndTopK = null;
         try {
-            queryAndTopK = IndexUtils.readQueryAndTopK(IndexConst.DIM_50_PATH + "query_top20_6M.o");
+            queryAndTopK = IndexUtils.readQueryAndTopK(TestConst.DIM_50_PATH + "query_top20_10M.o");
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -101,10 +110,9 @@ public class TestHnsw {
             }
             if(returnIDs.retainAll(setBrute)){
                 totalHit += returnIDs.size();
-                System.out.println("Overlapp between brute and and hash (over top 20) is : " + returnIDs.size());
+                System.out.println("Overlapp between brute and hash (over top 20) is : " + returnIDs.size());
             }
             System.out.println(" ");
-
         }
         System.out.println("Average search time :" + totalTime/(1000));
         System.out.println("Average overlap :" + totalHit/(1000));
