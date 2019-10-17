@@ -59,6 +59,9 @@ public class TestHnsw {
             vecList.add(new Item(i, vecs[i]));
         }
         HnswConfiguration configuration= new HnswConfiguration();
+        configuration.setM(20);
+        configuration.setEf(20);
+        configuration.setEfConstruction(400);
         configuration.setMaxItemLeaf(6_000_000);
         configuration.setM(50);
         configuration.setEf(50);
