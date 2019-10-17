@@ -1,5 +1,5 @@
 # Scalable_hnsw
-A Java, scalable implementation of the algorithm describe in the paper "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs"
+A Java, scalable implementation of the algorithm described in the paper "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs"
 
 The original source code can be found at: https://github.com/jelmerk/hnswlib.
 
