@@ -30,7 +30,7 @@ public interface VecHandler<TVector> {
     /**
      * Extract vectors from an {@link AtomicReferenceArray} of {@link Node} then
      * calling the function {@link #save(String, Object[])} to save the vectors.
-     * Used by {@link ai.preferred.cerebro.hnsw.LeafSegmentBlockingWriter}
+     * Used by {@link ai.preferred.cgierebro.hnsw.LeafSegmentBlockingWriter}
      * @param vecFilename path to the file
      * @param nodes the array of nodes the extract vectors from
      * @param nodeCount the actual size of the array, the array of Nodes will be allocated

@@ -18,7 +18,7 @@ public class BoundedMaxHeap extends PriorityQueue<Candidate> {
 
     @Override
     protected boolean lessThan(Candidate a, Candidate b) {
-        //originally lucene's implementation of PriorityQueue is a MinHeap
+        //originally lucene's implementation of PriorityQueue is a min heap
         //and this function is used to determine if a get moved up in the
         //heap. Here we want a max heap so we should check if a > b
         return a.distance > b.distance;
