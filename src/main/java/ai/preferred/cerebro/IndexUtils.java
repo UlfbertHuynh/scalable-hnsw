@@ -11,7 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
- * Utility class to facilitate all necessary function
+ * Utility class to containing all helper function
  * in cerebro.index like I/O, vector computations..., etc.
  *
  * @author hpminh@apcs.vn

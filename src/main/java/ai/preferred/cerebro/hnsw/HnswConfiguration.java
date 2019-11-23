@@ -1,13 +1,12 @@
 package ai.preferred.cerebro.hnsw;
 
-import ai.preferred.cerebro.DoubleDistanceFunctions;
 import ai.preferred.cerebro.handler.VecHandler;
 
 import java.util.Comparator;
 
 
 /**
- * Class containing the specification of an index for creation
+ * Class containing the configuration of an index for creation
  *
  * @author hpminh@apcs.vn
  */
@@ -124,7 +123,7 @@ public class HnswConfiguration {
     }
 
     /**
-     * Setting {@link #lowMemoryMode}
+     * Setting value of {@link #lowMemoryMode}
      * @param lowMemoryMode
      */
     public void setLowMemoryMode(boolean lowMemoryMode) {

@@ -28,7 +28,11 @@ import static ai.preferred.cerebro.IndexConst.Sp;
  * handle the problem at manager classes {@link HnswIndexWriter}
  * or {@link HnswIndexSearcher}
  *
- * @param <TVector> type of vectors supported
+ * @param <TVector> the type of numeric value of each of vector's element,
+ *                 currently supported are float[] and double[]. However,
+ *                 the library can work with any type of vector, just define
+ *                 your own {@link ai.preferred.cerebro.handler.VecHandler}
+ *                 at the handler package.
  * @author hpminh@apcs.vn
  */
 abstract class LeafSegment<TVector> {

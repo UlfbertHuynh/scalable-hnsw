@@ -9,7 +9,13 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
 
+/**
+ * Code for testing insertion and search on index built with float number vectors
+ */
 public class TestHnswDouble {
+    /**
+     * Print all detail information about the current capacity of the index
+     */
     @Test
     public void testPrintInfo(){
         String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
