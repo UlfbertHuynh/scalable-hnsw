@@ -11,6 +11,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+
+/**
+ * detailed implementation of saving and loading of float vectors.
+ * Using {@link Kryo} library.
+ *
+ * @author hpminh@apcs.vn
+ */
 public abstract class VecFloatHandler implements VecHandler<float[]>  {
     @Override
     public void saveNodes(String vecFilename, Node<float[]>[] nodes, int nodeCount) {

@@ -6,8 +6,22 @@ import org.apache.lucene.util.ThreadInterruptedException;
 import java.util.*;
 import java.util.concurrent.*;
 
+
+/**
+ * Manager class to start search on all leaf segments and then aggregate
+ * (using K-way merging algorithm) their results to get the top k.
+ *
+ * @param <TVector> type of the vector supported
+ *
+ * @author hpminh@apcs.vn
+ */
 public class HnswIndexSearcher<TVector> extends ParentHnsw<TVector> {
     ExecutorService executor;
+
+    /**
+     * Load into memory all the leaf segments of an already existing index
+     * @param idxDir
+     */
     public HnswIndexSearcher(String idxDir){
         super(idxDir);
         executor = Executors.newFixedThreadPool(nleaves);
@@ -23,6 +37,12 @@ public class HnswIndexSearcher<TVector> extends ParentHnsw<TVector> {
         this.visitedBitSetPool = new GenericObjectPool<>(() -> new BitSet(finalMaxNodeCount), nleaves);
     }
 
+    /**
+     * conduct search on all leaf segment then aggregate
+     * @param query the query vectors
+     * @param k the number of top results to be selected
+     * @return the internal Ids of the top results and their scores
+     */
     public TopDocs search(TVector query, int k){
         final int limit = Math.max(1, configuration.maxItemLeaf);
         final int cappedNumHits = Math.min(k, limit);

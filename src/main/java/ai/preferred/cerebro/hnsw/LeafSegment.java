@@ -18,11 +18,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import static ai.preferred.cerebro.IndexConst.Sp;
 
 /**
- * Implementation of {@link ConcurrentWriter} that implements the hnsw algorithm.
+ * Parent class containing attributes and methods used by both of
+ * writer {@link LeafSegmentWriter} and
+ * searcher {@link LeafSegmentSearcher} children classes
+ * </br>
+ * Note: you are not supposed to interact with any of
+ * {@link LeafSegment} directly be it {@link LeafSegmentWriter}
+ * or {@link LeafSegmentSearcher} instead write a function to
+ * handle the problem at manager classes {@link HnswIndexWriter}
+ * or {@link HnswIndexSearcher}
  *
- //* @param <T> Type of distance between items (expect any numeric type: float, double, int, ..)
- * @see <a href="https://arxiv.org/abs/1603.09320">
- * Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs</a>
+ * @param <TVector> type of vectors supported
+ * @author hpminh@apcs.vn
  */
 abstract class LeafSegment<TVector> {
     //constants
@@ -91,7 +98,20 @@ abstract class LeafSegment<TVector> {
 
     }
 
-    //Creation Constructor
+    /**
+     * Constructor for creating new leaf segment
+     * @param parent the manager of this leaf
+     * @param numName the ordered id of this leaf
+     * @param baseID used to get the absolute internal ID
+     *               of nodes from their relative internal ID
+     *               </br>
+     *               absolute internal ID = relative internal + baseID
+     *               </br>
+     *               relative internal = array index of a node in a segment
+     *               </br>
+     *               baseID = sum of maximum capacity of all leaf segments with
+     *               numName less than this segment's numName
+     */
     LeafSegment(ParentHnsw parent,
                 int numName, int baseID) {
         this(parent, numName);
@@ -102,7 +122,13 @@ abstract class LeafSegment<TVector> {
     }
 
 
-    //Load constructor
+    /**
+     *
+     * @param parent
+     * @param numName
+     * @param idxDir
+     * @param mode
+     */
      LeafSegment(ParentHnsw parent,
                  int numName,
                  String idxDir, Mode mode){
@@ -127,7 +153,7 @@ abstract class LeafSegment<TVector> {
         }
     }
 
-    public Optional<TVector> getVec(int internalID) {
+    public Optional<TVector> getVector(int internalID) {
         return Optional.ofNullable(nodes[internalID]).map(Node::vector);
     }
 
@@ -138,7 +164,6 @@ abstract class LeafSegment<TVector> {
     public int getNodeCount() {
         return nodeCount;
     }
-
     /*
 
     protected boolean lesser(double x, double y) {

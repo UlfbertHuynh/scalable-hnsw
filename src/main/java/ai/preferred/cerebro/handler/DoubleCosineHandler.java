@@ -1,6 +1,13 @@
 package ai.preferred.cerebro.handler;
-
-public class DoubleCosineHandler extends VecDoubleHandler {
+/**
+ * Child class of {@link VecDoubleHandler} with detailed implementation of
+ * the distance function using cosine metric
+ *
+ * Whenever you need to use a new metric just create a new child class like this
+ *
+ * @author hpminh@apcs.vn
+ */
+public final class DoubleCosineHandler extends VecDoubleHandler {
     @Override
     public double distance(double[] a, double[] b) {
         double dot = 0.0f;

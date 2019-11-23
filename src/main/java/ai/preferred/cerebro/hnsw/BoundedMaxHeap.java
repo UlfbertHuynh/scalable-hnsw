@@ -7,11 +7,14 @@ import java.util.function.Supplier;
 
 /**
  * Class extending lucene's binary heap (minheap) implementation {@link PriorityQueue}
+ *
+ * @author hpminh@apcs.vn
  */
 public class BoundedMaxHeap extends PriorityQueue<Candidate> {
     public BoundedMaxHeap(int maxSize, Supplier<Candidate> sentinelObjectSupplier) {
         super(maxSize, sentinelObjectSupplier);
     }
+
 
     @Override
     protected boolean lessThan(Candidate a, Candidate b) {

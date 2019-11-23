@@ -11,6 +11,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
+/**
+ * detailed implementation of saving and loading of double vectors.
+ * Using {@link Kryo} library.
+ *
+ * @author hpminh@apcs.vn
+ */
 public abstract class VecDoubleHandler implements VecHandler<double[]> {
 
     @Override

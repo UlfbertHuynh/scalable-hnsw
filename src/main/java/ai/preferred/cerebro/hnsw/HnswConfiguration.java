@@ -6,7 +6,11 @@ import ai.preferred.cerebro.handler.VecHandler;
 import java.util.Comparator;
 
 
-
+/**
+ * Class containing the specification of an index for creation
+ *
+ * @author hpminh@apcs.vn
+ */
 public class HnswConfiguration {
     private static final int DEFAULT_M = 10;
     private static final int DEFAULT_EF = 10;
@@ -19,6 +23,10 @@ public class HnswConfiguration {
     VecHandler handler;
     Comparator distanceComparator;
 
+    /**
+     * For setting the maximum capacity of a leaf segment.
+     * @param maxItemLeaf
+     */
     public void setMaxItemLeaf(int maxItemLeaf) {
         this.maxItemLeaf = maxItemLeaf;
     }
@@ -101,12 +109,24 @@ public class HnswConfiguration {
         this.removeEnabled = removeEnabled;
     }
 
-
+    /**
+     * If {@link #lowMemoryMode} is false:
+     * create the optimal number of leaf segments (= number of cores your CPU)
+     * and spread the samples to among them.
+     * </br>
+     * If {@link #lowMemoryMode} is true:
+     * create one leaf segment insert the samples into the leaf until leaf capacity
+     * is reached then create new leaf and repeat util run out of samples
+     * @return
+     */
     public boolean isLowMemoryMode() {
         return lowMemoryMode;
     }
 
-
+    /**
+     * Setting {@link #lowMemoryMode}
+     * @param lowMemoryMode
+     */
     public void setLowMemoryMode(boolean lowMemoryMode) {
         this.lowMemoryMode = lowMemoryMode;
     }

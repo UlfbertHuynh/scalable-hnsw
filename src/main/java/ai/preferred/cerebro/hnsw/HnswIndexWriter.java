@@ -12,13 +12,29 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Manager class for creating leaf indexes (leaf segments), inserting samples
+ * and automatically handling the creation of leaf segments during runtime if
+ * capacity of all existing leaves is reached or providing an interface to do
+ * so manually.
+ * @param <TVector> the type of vector supported.
+ *
+ * @author hpminh@apcs.vn
+ */
+
 public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
         implements ConcurrentWriter<TVector>{
 
     private final int OPTIMAL_NUM_LEAVES;
 
 
-    //Create Constructor
+    /**
+     * Contructor for creating a new index at a directory, will throw error
+     * if another hnsw index has already resided in that directory
+     *
+     * @param configuration object containing the configurable setting of a hnsw index
+     * @param dir the directory to build the index
+     */
     public HnswIndexWriter(HnswConfiguration configuration, String dir) {
         if (!isSafeToCreate(dir)){
             throw new IllegalArgumentException("An index has already resided in this directory. Can only modify.");
@@ -49,7 +65,11 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
 
     }
 
-    //Load up an already created index for modifying
+    /**
+     * Contructor for loading up an already existing index at a directory for
+     * modifying (insert more samples, delete samples, update samples)
+     * @param dir the directory containing the index
+     */
     public HnswIndexWriter(String dir){
         super(dir);
         OPTIMAL_NUM_LEAVES = Runtime.getRuntime().availableProcessors();
@@ -86,25 +106,11 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
         else
             throw new IllegalArgumentException("In-action leaf's index should not be greater than the number of leaves minus one");
     }
-/*
-    private synchronized SynchronizedLeafHnswWriter chooseLeaf(){
-        if (leaves[nleaves - 1].size() >= configuration.maxItemLeaf){
-            if(nleaves < OPTIMAL_NUM_LEAVES){
-                return createLeaf();
-            }else {
-                for (int i = 0; i < OPTIMAL_NUM_LEAVES; i++) {
-                    if(leaves[i].size() < leaves[i].maxNodeCount)
-                        return leaves[i];
-                }
-                throw new IllegalArgumentException("Some errors occur when checking capacity");
-            }
-        }
-        else
-            return leaves[nleaves - 1];
-    }
+
+    /**
+     * removing a sample by its external ID
+     * @param externalID external ID of the vector sample
      */
-
-
     public void removeOnExternalID(int externalID) {
         int globalID = lookup.get(externalID);
         int leafNum = globalID / configuration.maxItemLeaf;
@@ -129,6 +135,10 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
                     "\nSpace needed: " + amountToInsert + ", Space had: " + remainingSlots;
     }
 
+    /**
+     * return the number of samples across all the leaf segments of the index
+     * @return
+     */
     public int size() {
         int size = 0;
         for (int i = 0; i < nleaves; i++) {
@@ -151,7 +161,11 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
     }
      */
 
-
+    /**
+     * Insert the samples into the index
+     * @param items the items to add to the index
+     * @throws InterruptedException
+     */
     @Override
     public void addAll(Collection<Item<TVector>> items) throws InterruptedException {
         String message = checkCapacity(items.size());
@@ -256,6 +270,11 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
         }
     }
 
+    /**
+     * save the index into concrete files. Make sure to call this function before
+     * terminating. Otherwise all information is lost.
+     * @throws IOException
+     */
     @Override
     public void save() throws IOException {
         synchronized (configuration){
@@ -293,7 +312,7 @@ public final class HnswIndexWriter<TVector> extends ParentHnsw<TVector>
         }
     }
 
-    static class InsertItemTask implements Runnable{
+    static private class InsertItemTask implements Runnable{
         final static int DEFAULT_PROGRESS_UPDATE_INTERVAL = 1_000;
         final private Queue<Item> itemQueue;
         final private AtomicReference<RuntimeException> throwableHolder;
