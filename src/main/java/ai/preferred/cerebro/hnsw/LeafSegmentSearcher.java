@@ -4,6 +4,14 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
+/**
+ * Primary class to conduct search on each segment, optimized to load only information necessary for searching.
+ * @param <TVector> the type of numeric value of each of vector's element,
+ *                 currently supported are float[] and double[]. However,
+ *                 the library can work with any type of vector, just define
+ *                 your own {@link ai.preferred.cerebro.handler.VecHandler}
+ *                 at the handler package.
+ */
 public class LeafSegmentSearcher<TVector> extends LeafSegment<TVector> {
 
     LeafSegmentSearcher(ParentHnsw parent, int numName, String idxDir) {

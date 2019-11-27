@@ -10,6 +10,15 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
 
+/**
+ * Class for segment insertion, updating and deletion.
+ * @param <TVector> the type of numeric value of each of vector's element,
+ *                 currently supported are float[] and double[]. However,
+ *                 the library can work with any type of vector, just define
+ *                 your own {@link ai.preferred.cerebro.handler.VecHandler}
+ *                 at the handler package.
+ * @author hpminh@apcs.vn
+ */
 public class LeafSegmentWriter<TVector> extends LeafSegment<TVector> {
 
     //Creation Constructor

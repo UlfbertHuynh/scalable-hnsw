@@ -3,13 +3,11 @@ package ai.preferred.cerebro.hnsw;
 import ai.preferred.cerebro.handler.VecHandler;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
-
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.ConcurrentHashMap;
-
 import static ai.preferred.cerebro.hnsw.IndexConst.Sp;
 
 abstract public class ParentHnsw<TVector> {

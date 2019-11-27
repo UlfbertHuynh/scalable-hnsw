@@ -47,10 +47,12 @@ public class LeafSegmentBlockingWriter<TVector> extends LeafSegmentWriter<TVecto
         nodes = new AtomicReferenceArray<>(super.nodes);
         super.nodes = null;
     }
+
     @Override
-    public Optional<TVector> getVec(int internalID) {
+    public Optional<TVector> getVector(int internalID) {
         return Optional.ofNullable(nodes.get(internalID)).map(Node::vector);
     }
+
     @Override
     public Optional<Node<TVector>> getNode(int internalID) {
         return Optional.ofNullable(nodes.get(internalID));

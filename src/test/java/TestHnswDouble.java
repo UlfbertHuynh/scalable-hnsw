@@ -7,7 +7,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Code for testing insertion and search on index built with float number vectors
+ */
 public class TestHnswDouble {
+    /**
+     * Print all detail information about the current capacity of the index
+     */
     @Test
     public void testPrintInfo(){
         String indexDir = TestConst.HNSW_PATH_MULTI + "1M";
