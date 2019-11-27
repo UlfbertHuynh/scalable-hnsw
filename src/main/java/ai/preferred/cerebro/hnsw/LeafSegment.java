@@ -1,9 +1,6 @@
 package ai.preferred.cerebro.hnsw;
 
 
-import ai.preferred.cerebro.ConcurrentWriter;
-
-import ai.preferred.cerebro.IndexUtils;
 import ai.preferred.cerebro.handler.VecHandler;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -15,7 +12,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static ai.preferred.cerebro.IndexConst.Sp;
+import static ai.preferred.cerebro.hnsw.IndexConst.Sp;
 
 /**
  * Implementation of {@link ConcurrentWriter} that implements the hnsw algorithm.

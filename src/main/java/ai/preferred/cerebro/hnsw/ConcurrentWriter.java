@@ -1,6 +1,4 @@
-package ai.preferred.cerebro;
-
-import ai.preferred.cerebro.hnsw.Item;
+package ai.preferred.cerebro.hnsw;
 
 import java.io.*;
 import java.util.*;

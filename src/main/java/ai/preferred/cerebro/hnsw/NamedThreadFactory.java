@@ -1,4 +1,4 @@
-package ai.preferred.cerebro;
+package ai.preferred.cerebro.hnsw;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;

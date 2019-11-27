@@ -1,4 +1,4 @@
-package ai.preferred.cerebro;
+package ai.preferred.cerebro.hnsw;
 
 import org.apache.commons.lang3.SystemUtils;
 

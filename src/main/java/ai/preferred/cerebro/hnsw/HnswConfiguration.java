@@ -1,6 +1,5 @@
 package ai.preferred.cerebro.hnsw;
 
-import ai.preferred.cerebro.DoubleDistanceFunctions;
 import ai.preferred.cerebro.handler.VecHandler;
 
 import java.util.Comparator;

@@ -1,4 +1,4 @@
-package ai.preferred.cerebro;
+package ai.preferred.cerebro.hnsw;
 
 /**
  * Implementation of {@link ProgressListener} that print progress

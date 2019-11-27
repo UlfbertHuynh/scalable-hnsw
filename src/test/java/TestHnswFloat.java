@@ -1,4 +1,4 @@
-import ai.preferred.cerebro.IndexUtils;
+import ai.preferred.cerebro.hnsw.IndexUtils;
 import ai.preferred.cerebro.handler.DoubleCosineHandler;
 import ai.preferred.cerebro.handler.FloatCosineHandler;
 import ai.preferred.cerebro.hnsw.*;

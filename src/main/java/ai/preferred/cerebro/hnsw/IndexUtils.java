@@ -1,4 +1,4 @@
-package ai.preferred.cerebro;
+package ai.preferred.cerebro.hnsw;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;

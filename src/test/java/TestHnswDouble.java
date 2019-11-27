@@ -1,4 +1,3 @@
-import ai.preferred.cerebro.*;
 import ai.preferred.cerebro.handler.DoubleCosineHandler;
 import ai.preferred.cerebro.hnsw.*;
 import org.apache.lucene.search.TopDocs;
@@ -7,7 +6,6 @@ import org.junit.Test;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentNavigableMap;
 
 public class TestHnswDouble {
     @Test

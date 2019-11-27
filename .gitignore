@@ -2,3 +2,4 @@
 target/
 build/
 .DS_store
+/src/test/java/netflix
